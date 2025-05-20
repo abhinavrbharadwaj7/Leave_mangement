@@ -1,110 +1,170 @@
-import React, { useState } from 'react';
-import { Form, Input, Button } from 'antd';
-import { UserOutlined, LockOutlined } from '@ant-design/icons';
+import React, { useState, useEffect } from 'react';
+import { Form, Input, Button, message, notification, Spin } from 'antd';
+import { MailOutlined, ReloadOutlined } from '@ant-design/icons';
+import axios from 'axios';
 import './Login.css';
 
 const Login = () => {
-  const [isActive, setIsActive] = useState(false);
-  const [employeeForm] = Form.useForm();
-  const [managerForm] = Form.useForm();
+  const [form] = Form.useForm();
+  const [isOtpSent, setIsOtpSent] = useState(false);
+  const [otpTimer, setOtpTimer] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState('');
 
-  const handleEmployeeLogin = (values) => {
-    console.log('Employee login:', values);
+  useEffect(() => {
+    if (otpTimer > 0) {
+      const timer = setTimeout(() => setOtpTimer(otpTimer - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [otpTimer]);
+
+  const handleGetOTP = async () => {
+    try {
+      // Validate email first
+      await form.validateFields(['email']);
+      const emailValue = form.getFieldValue('email');
+      setLoading(true);
+      
+      // Replace with your backend API endpoint
+      const response = await axios.post('http://localhost:3001/api/send-otp', {
+        email: emailValue
+      });
+
+      if (response.data.success) {
+        setIsOtpSent(true);
+        setEmail(emailValue);
+        notification.success({
+          message: 'OTP Sent',
+          description: 'Please check your email for the OTP',
+          placement: 'top',
+        });
+      }
+    } catch (error) {
+      if (error.errorFields) {
+        return; // Form validation error
+      }
+      notification.error({
+        message: 'Failed to send OTP',
+        description: error.response?.data?.message || 'Please try again later',
+        placement: 'top',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleManagerLogin = (values) => {
-    console.log('Manager login:', values);
+  const handleVerifyOTP = async (values) => {
+    try {
+      setLoading(true);
+      // Replace with your backend API endpoint
+      const response = await axios.post('http://localhost:3001/api/verify-otp', {
+        email: email,
+        otp: values.otp
+      });
+
+      if (response.data.success) {
+        notification.success({
+          message: 'Success',
+          description: 'OTP verified successfully',
+          placement: 'top',
+        });
+        // Handle successful login here
+      }
+    } catch (error) {
+      notification.error({
+        message: 'Verification Failed',
+        description: error.response?.data?.message || 'Invalid OTP',
+        placement: 'top',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleGetOTP = () => {
-    const employeeId = employeeForm.getFieldValue('username');
-    console.log('Generating OTP for:', employeeId);
-    // Add OTP generation logic here
+  const handleResendOTP = () => {
+    if (otpTimer === 0) {
+      handleGetOTP();
+    }
   };
 
   return (
-    <div className={`container ${isActive ? 'active' : ''}`}>
-      <div className="form-box login">
-        <Form form={employeeForm} onFinish={handleEmployeeLogin}>
-          <h1>Employee Login</h1>
-          <Form.Item
-            name="username"
-            rules={[{ required: true, message: 'Please input your employee ID!' }]}
-            className="input-box"
-          >
-            <Input
-              prefix={<UserOutlined />}
-              placeholder="Employee ID"
-            />
-          </Form.Item>
-          
-          <Button type="default" onClick={handleGetOTP} className="btn otp-btn">
-            Get OTP
-          </Button>
-
-          <Form.Item
-            name="otp"
-            rules={[{ required: true, message: 'Please input your OTP!' }]}
-            className="input-box"
-          >
-            <Input
-              placeholder="Enter OTP"
-            />
-          </Form.Item>
-
-          <Button type="primary" htmlType="submit" className="btn">
-            Login as Employee
-          </Button>
-        </Form>
-      </div>
-
-      <div className="form-box register">
-        <Form form={managerForm} onFinish={handleManagerLogin}>
-          <h1>Manager Login</h1>
-          <Form.Item
-            name="username"
-            rules={[{ required: true, message: 'Please input your manager ID!' }]}
-            className="input-box"
-          >
-            <Input
-              prefix={<UserOutlined />}
-              placeholder="Manager ID"
-            />
-          </Form.Item>
-          <Form.Item
-            name="password"
-            rules={[{ required: true, message: 'Please input your password!' }]}
-            className="input-box"
-          >
-            <Input.Password
-              prefix={<LockOutlined />}
-              placeholder="Password"
-            />
-          </Form.Item>
-          <div className="forgot-link">
-            <a href="#">Forgot Password?</a>
+    <div className="container">
+      <Spin spinning={loading}>
+        <div className="login-box">
+          <div className="logo">
+            <h1>Leave Management</h1>
           </div>
-          <Button type="primary" htmlType="submit" className="btn">Login as Manager</Button>
-        </Form>
-      </div>
+          <h2>Sign in to your workspace</h2>
+          
+          <Form form={form} onFinish={handleVerifyOTP} className="login-form">
+            <Form.Item
+              name="email"
+              rules={[
+                { required: true, message: 'Please input your email!' },
+                { type: 'email', message: 'Please enter a valid email!' },
+                {
+                  pattern: /^[A-Za-z0-9._%+-]+@acquiscompliance\.com$/,
+                  message: 'Please enter a valid Acquis email address'
+                }
+              ]}
+            >
+              <Input
+                prefix={<MailOutlined />}
+                placeholder="Enter your Acquis email"
+                size="large"
+                disabled={isOtpSent}
+              />
+            </Form.Item>
 
-      <div className="toggle-box">
-        <div className="toggle-panel toggle-left">
-          <h1>Employee Portal</h1>
-          <p>Switch to employee login</p>
-          <button className="btn" onClick={() => setIsActive(false)}>
-            Employee Login
-          </button>
-        </div>
+            <Button 
+              type="primary" 
+              onClick={handleGetOTP}
+              disabled={isOtpSent && loading}
+              className="submit-btn"
+              size="large"
+              loading={loading}
+            >
+              {isOtpSent ? 'Resend OTP' : 'Get OTP'}
+            </Button>
 
-        <div className="toggle-panel toggle-right">
-          <h1>Manager Portal</h1>
-          <p>Switch to manager login</p>
-          <button className="btn" onClick={() => setIsActive(true)}>
-            Manager Login
-          </button>
+            {isOtpSent && (
+              <Form.Item
+                name="otp"
+                rules={[
+                  { required: true, message: 'Please input your OTP!' },
+                  { pattern: /^\d{6}$/, message: 'OTP must be 6 digits!' }
+                ]}
+              >
+                <Input
+                  placeholder="Enter 6-digit OTP"
+                  size="large"
+                  maxLength={6}
+                />
+              </Form.Item>
+            )}
+
+            {isOtpSent && (
+              <Button 
+                type="primary" 
+                htmlType="submit"
+                className="submit-btn"
+                size="large"
+                loading={loading}
+              >
+                Verify OTP
+              </Button>
+            )}
+          </Form>
+
+          <div className="forgot-password">
+            <a href="/forgot-password">Forgot Password?</a>
+          </div>
+          
+          <div className="footer">
+            © Leave Management System {new Date().getFullYear()}
+          </div>
         </div>
-      </div>
+      </Spin>
     </div>
   );
 };
