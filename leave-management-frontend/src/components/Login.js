@@ -16,6 +16,12 @@ const Login = () => {
     console.log('Manager login:', values);
   };
 
+  const handleGetOTP = () => {
+    const employeeId = employeeForm.getFieldValue('username');
+    console.log('Generating OTP for:', employeeId);
+    // Add OTP generation logic here
+  };
+
   return (
     <div className={`container ${isActive ? 'active' : ''}`}>
       <div className="form-box login">
@@ -31,20 +37,24 @@ const Login = () => {
               placeholder="Employee ID"
             />
           </Form.Item>
+          
+          <Button type="default" onClick={handleGetOTP} className="btn otp-btn">
+            Get OTP
+          </Button>
+
           <Form.Item
-            name="password"
-            rules={[{ required: true, message: 'Please input your password!' }]}
+            name="otp"
+            rules={[{ required: true, message: 'Please input your OTP!' }]}
             className="input-box"
           >
-            <Input.Password
-              prefix={<LockOutlined />}
-              placeholder="Password"
+            <Input
+              placeholder="Enter OTP"
             />
           </Form.Item>
-          <div className="forgot-link">
-            <a href="#">Forgot Password?</a>
-          </div>
-          <Button type="primary" htmlType="submit" className="btn">Login as Employee</Button>
+
+          <Button type="primary" htmlType="submit" className="btn">
+            Login as Employee
+          </Button>
         </Form>
       </div>
 
