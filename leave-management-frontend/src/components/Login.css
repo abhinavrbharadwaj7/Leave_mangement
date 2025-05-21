@@ -37,6 +37,12 @@ body {
     font-weight: 600;
 }
 
+.logo img {
+    max-width: 200px;
+    height: auto;
+    margin-bottom: 30px;
+}
+
 .login-box h2 {
     color: #333;
     margin-bottom: 30px;
@@ -99,7 +105,7 @@ body {
 .footer {
     margin-top: 40px;
     color: #666;
-    font-size: 14px;
+    font-size: 12px;
 }
 
 @media (max-width: 480px) {

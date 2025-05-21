@@ -3,6 +3,7 @@ import { Form, Input, Button, message, notification, Spin } from 'antd';
 import { MailOutlined, ReloadOutlined } from '@ant-design/icons';
 import axios from 'axios';
 import './Login.css';
+import logo from '../assets/unnamed.jpg';
 
 const Login = () => {
   const [form] = Form.useForm();
@@ -92,7 +93,14 @@ const Login = () => {
       <Spin spinning={loading}>
         <div className="login-box">
           <div className="logo">
-            <h1>Leave Management</h1>
+            <img 
+              src={logo} 
+              alt="Acquis Logo" 
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.style.display = 'none';
+              }}
+            />
           </div>
           <h2>Sign in to your workspace</h2>
           
@@ -161,7 +169,7 @@ const Login = () => {
           </div>
           
           <div className="footer">
-            © Leave Management System {new Date().getFullYear()}
+            © Copyright Acquis Compliance 2020 - {new Date().getFullYear()}
           </div>
         </div>
       </Spin>
