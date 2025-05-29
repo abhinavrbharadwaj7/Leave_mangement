@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Form, Input, Button, message, notification, Spin } from 'antd';
-import { MailOutlined, ReloadOutlined } from '@ant-design/icons';
+import { MailOutlined } from '@ant-design/icons';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import './Login.css';
 import logo from '../assets/unnamed.jpg';
 
@@ -11,6 +12,7 @@ const Login = () => {
   const [otpTimer, setOtpTimer] = useState(0);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (otpTimer > 0) {
@@ -59,17 +61,20 @@ const Login = () => {
       setLoading(true);
       // Replace with your backend API endpoint
       const response = await axios.post('http://localhost:3001/api/verify-otp', {
-        email: email,
+        email: form.getFieldValue('email'),
         otp: values.otp
       });
 
       if (response.data.success) {
-        notification.success({
-          message: 'Success',
-          description: 'OTP verified successfully',
-          placement: 'top',
-        });
-        // Handle successful login here
+        message.success('Login successful!');
+        const role = response.data.role;
+
+        // Navigate to the appropriate dashboard
+        if (role === 'manager') {
+          navigate('/manager-dashboard');
+        } else {
+          navigate('/employee-dashboard');
+        }
       }
     } catch (error) {
       notification.error({

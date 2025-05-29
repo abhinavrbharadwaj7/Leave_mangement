@@ -12,16 +12,27 @@ const otpStore = new Map();
 
 // Email transporter configuration
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 465, // Use port 465 for SSL
+  secure: true, // Use SSL
   auth: {
-    user: process.env.EMAIL_USER, // Ensure this matches your .env file
-    pass: process.env.EMAIL_PASS  // Ensure this matches your .env file
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
   }
 });
 
 // Debugging: Log email credentials
 console.log('Email User:', process.env.EMAIL_USER);
 console.log('Email Pass:', process.env.EMAIL_PASS ? 'Present' : 'Missing');
+
+// Verify SMTP connection
+transporter.verify((error, success) => {
+  if (error) {
+    console.error('SMTP Connection Error:', error);
+  } else {
+    console.log('SMTP Server is ready to take messages:', success);
+  }
+});
 
 // Generate OTP
 const generateOTP = () => {
@@ -85,7 +96,11 @@ app.post('/api/verify-otp', (req, res) => {
   // Verify OTP
   if (storedOTPData.otp === otp) {
     otpStore.delete(email);
-    return res.json({ success: true, message: 'OTP verified successfully' });
+
+    // Mock role detection based on email
+    const role = email.includes('manager') ? 'manager' : 'employee';
+
+    return res.json({ success: true, message: 'OTP verified successfully', role });
   }
 
   // Handle incorrect OTP
