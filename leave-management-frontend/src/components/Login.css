@@ -41,10 +41,14 @@ body {
     max-width: 200px;
     height: auto;
     margin-bottom: 30px;
+    background-color: #ffffff !important; /* Force background color to white */
+    padding: 10px; /* Optional: Add padding for better spacing */
+    border-radius: 8px; /* Optional: Add rounded corners */
+    box-shadow: none; /* Remove any shadow that might appear as grey */
 }
 
 .login-box h2 {
-    color: #333;
+    color: #4c6bc5; /* Updated to blue color for visibility */
     margin-bottom: 30px;
     font-size: 18px;
     font-weight: 500;
@@ -71,6 +75,7 @@ body {
     font-size: 16px;
     margin-bottom: 15px;
     background: #4c6bc5;
+    color: #000000 !important; /* Explicitly set text color to white */
 }
 
 .submit-btn:hover {

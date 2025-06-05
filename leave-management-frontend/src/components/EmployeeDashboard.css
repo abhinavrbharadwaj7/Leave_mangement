@@ -1,116 +1,198 @@
-/* General Reset */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  font-family: 'Poppins', sans-serif;
-}
-
-/* Dashboard Layout */
 .employee-dashboard {
   height: 100vh;
+  background-color: #f8f9fb;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .dashboard-sider {
-  background: #333;
+  background: #4c6bc5; /* Set the entire sidebar to blue */
 }
 
 .logo {
+  background: #ffffff; /* Match the logo background with the sidebar */
+  color: #000000; /* Ensure text/logo remains visible */
   text-align: center;
-  padding: 20px;
-  background: #333;
+  padding: 24px;
 }
 
 .logo-image {
-  max-width: 150px;
+  max-width: 120px;
   height: auto;
-  border-radius: 8px;
+  border-radius: 10px;
   margin-bottom: 10px;
 }
 
-/* Header Styling */
 .dashboard-header {
-  background: #1e2a47;
-  padding: 20px;
+  background: rgba(76, 107, 197, 0.8); /* Semi-transparent blue */
+  backdrop-filter: blur(10px); /* Glassmorphism effect */
+  padding: 16px 32px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid #ccc;
+  border-radius: 12px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+}
+
+.dashboard-header h3 {
+  margin: 0;
+  color: #ffffff;
+  font-size: 20px; /* Slightly larger font for emphasis */
+}
+
+.request-time-off-btn {
+  background: #2ed573;
+  border: none;
+  font-weight: bold;
+}
+
+.request-time-off-btn:hover {
+  background: #26c267;
+}
+
+.request-btn {
+  background: rgba(76, 107, 197, 0.8); /* Semi-transparent blue */
+  color: #000000;
+  border: none;
+  padding: 12px 24px;
+  font-size: 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.request-btn:hover {
+  background: rgba(63, 91, 184, 0.8); /* Slightly darker shade */
 }
 
 .dashboard-content {
-  padding: 20px;
-  background: #f9f9f9;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 30px; /* Add spacing between sections */
 }
 
 .dashboard-title {
   text-align: center;
-  color: #4c6bc5;
-  margin-bottom: 20px;
+  color: #f4f5f8;
+  margin-bottom: 24px;
+  font-size: 24px;
 }
 
-/* Card and Leave Balances */
-.dashboard-card {
-  border-radius: 12px;
-  background: #fff;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  padding: 16px;
+.leave-balance-summary {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  margin-bottom: 40px;
 }
 
 .leave-balance-card {
+  text-align: center;
   border-radius: 12px;
-  background: #fff;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  background: #ffffff;
   padding: 20px;
-  transition: transform 0.2s ease-in-out;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  transition: transform 0.2s ease;
 }
 
 .leave-balance-card:hover {
-  transform: translateY(-5px);
+  transform: translateY(-4px);
 }
 
 .leave-type {
-  color: #4c6bc5;
-  margin-bottom: 10px;
+  font-weight: 600;
+  margin-top: 10px;
 }
 
-.leave-balance-text {
+.section-card {
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  padding: 20px;
+  height: 100%;
+}
+
+.section-title {
   font-size: 16px;
-  color: #333;
+  font-weight: 600;
+  margin-bottom: 12px;
 }
 
-/* Button Styles */
-.request-time-off-btn {
-  background: #4caf50;
-  color: white;
+.ant-modal-content {
+  background: rgba(255, 255, 255, 0.8); /* Semi-transparent white */
+  backdrop-filter: blur(10px); /* Glassmorphism effect */
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1); /* Modern shadow effect */
+}
+
+.ant-modal-header {
+  background: rgba(76, 107, 197, 0.8); /* Semi-transparent blue */
+  border-radius: 12px 12px 0 0;
+}
+
+.ant-modal-title {
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.ant-btn-primary {
+  background-color: #ffffff;
   border-radius: 8px;
-  padding: 8px 16px;
-  font-weight: bold;
-  transition: background 0.3s ease;
+  font-weight: 600;
 }
 
-.request-time-off-btn:hover {
-  background: #45a049;
+.ant-form-item-label > label {
+  font-weight: 600;
 }
 
-.modern-button {
-  background: #1e2a47;
-  color: white;
-  border-radius: 8px;
-  font-weight: bold;
-  transition: background 0.3s ease;
+.leave-summary-card {
+  background: rgba(255, 255, 255, 0.8); /* Semi-transparent white */
+  backdrop-filter: blur(10px); /* Glassmorphism effect */
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1); /* Modern shadow effect */
+  text-align: center;
 }
 
-.modern-button:hover {
-  background: #4c6bc5;
+.leave-progress {
+  display: flex;
+  justify-content: center;
+  gap: 50px; /* Increase spacing between progress bars */
 }
 
-/* Modal Styling */
-.modern-modal .ant-modal-header {
-  background: #1e2a47;
-  color: white;
+.leave-progress div {
+  text-align: center;
 }
 
-.modern-modal .ant-modal-footer {
-  border-top: none;
+.leave-progress p {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600; /* Bold text for better readability */
+}
+
+.dashboard-layout {
+  height: 100vh; /* Ensure the dashboard covers the entire viewport height */
+  width: 100vw; /* Ensure the dashboard covers the entire viewport width */
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.6));
+  backdrop-filter: blur(10px); /* Glassmorphism effect */
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); /* Responsive grid */
+  gap: 20px; /* Spacing between cards */
+}
+
+.dashboard-card {
+  background: rgba(255, 255, 255, 0.8); /* Semi-transparent white */
+  backdrop-filter: blur(10px); /* Glassmorphism effect */
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1); /* Modern shadow effect */
+  transition: transform 0.3s ease, box-shadow 0.3s ease; /* Smooth hover effect */
+}
+
+.dashboard-card:hover {
+  transform: translateY(-5px); /* Lift card on hover */
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15); /* Enhanced shadow on hover */
 }
