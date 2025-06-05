@@ -1,7 +1,46 @@
+/* General Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Poppins', sans-serif;
+}
+
+/* Dashboard Layout */
 .employee-dashboard {
+  height: 100vh;
+}
+
+.dashboard-sider {
+  background: #333;
+}
+
+.logo {
+  text-align: center;
   padding: 20px;
-  background: #f0f2f5;
-  min-height: 100vh;
+  background: #333;
+}
+
+.logo-image {
+  max-width: 150px;
+  height: auto;
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+
+/* Header Styling */
+.dashboard-header {
+  background: #1e2a47;
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #ccc;
+}
+
+.dashboard-content {
+  padding: 20px;
+  background: #f9f9f9;
 }
 
 .dashboard-title {
@@ -10,25 +49,24 @@
   margin-bottom: 20px;
 }
 
+/* Card and Leave Balances */
 .dashboard-card {
+  border-radius: 12px;
   background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  padding: 20px;
-}
-
-.leave-balance {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
-  justify-content: center;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  padding: 16px;
 }
 
 .leave-balance-card {
-  text-align: center;
-  border-radius: 8px;
+  border-radius: 12px;
   background: #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  transition: transform 0.2s ease-in-out;
+}
+
+.leave-balance-card:hover {
+  transform: translateY(-5px);
 }
 
 .leave-type {
@@ -39,4 +77,40 @@
 .leave-balance-text {
   font-size: 16px;
   color: #333;
+}
+
+/* Button Styles */
+.request-time-off-btn {
+  background: #4caf50;
+  color: white;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-weight: bold;
+  transition: background 0.3s ease;
+}
+
+.request-time-off-btn:hover {
+  background: #45a049;
+}
+
+.modern-button {
+  background: #1e2a47;
+  color: white;
+  border-radius: 8px;
+  font-weight: bold;
+  transition: background 0.3s ease;
+}
+
+.modern-button:hover {
+  background: #4c6bc5;
+}
+
+/* Modal Styling */
+.modern-modal .ant-modal-header {
+  background: #1e2a47;
+  color: white;
+}
+
+.modern-modal .ant-modal-footer {
+  border-top: none;
 }

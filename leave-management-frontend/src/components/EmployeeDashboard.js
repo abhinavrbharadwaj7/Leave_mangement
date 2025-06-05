@@ -1,163 +1,168 @@
 import React, { useState } from 'react';
-import { Tabs, Button, Form, Input, DatePicker, Select, Table, Tag, Card, Row, Col, Typography, notification } from 'antd';
-import { PlusOutlined, CalendarOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { Layout, Menu, Card, Row, Col, Typography, Button, Table, Tag, Modal, Form, Input, DatePicker, Select, Progress } from 'antd';
+import { DashboardOutlined, HistoryOutlined, UserOutlined, CalendarOutlined } from '@ant-design/icons';
 import './EmployeeDashboard.css';
+import logo from '../assets/unnamed.jpg';
 
+const { Header, Content, Sider } = Layout;
+const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
 const { Option } = Select;
-const { Title, Text } = Typography;
+
+const leaveBalances = [
+  { type: 'Casual Leave', available: 3, used: 2, total: 5, color: 'purple' },
+  { type: 'Sick Leave', available: 4, used: 1, total: 5, color: 'blue' },
+  { type: 'Earned Leave', available: 8, used: 2, total: 10, color: 'green' }
+];
+
+const leaveRequests = []; // Example: [{ duration: 'May 10 - May 12', type: 'Casual', days: 3, status: 'Pending' }]
 
 const EmployeeDashboard = () => {
-  const [leaveApplications, setLeaveApplications] = useState([]);
-  const [leaveBalance, setLeaveBalance] = useState({
-    sick: 5,
-    vacation: 10,
-    casual: 7,
-    wfh: 3
-  });
+  const [isModalVisible, setIsModalVisible] = useState(false);
 
-  const handleApplyLeave = (values) => {
-    const [startDate, endDate] = values.dates;
-    const newApplication = {
-      key: leaveApplications.length + 1,
-      type: values.type,
-      startDate: startDate.format('YYYY-MM-DD'),
-      endDate: endDate.format('YYYY-MM-DD'),
-      reason: values.reason,
-      status: 'Pending'
-    };
-
-    setLeaveApplications([...leaveApplications, newApplication]);
-    notification.success({
-      message: 'Leave Application Submitted',
-      description: 'Your leave application has been submitted for approval.',
-    });
+  const showModal = () => {
+    setIsModalVisible(true);
   };
 
-  const columns = [
-    {
-      title: 'Leave Type',
-      dataIndex: 'type',
-      key: 'type',
-      render: (type) => <Tag color="blue">{type}</Tag>
-    },
-    {
-      title: 'Start Date',
-      dataIndex: 'startDate',
-      key: 'startDate'
-    },
-    {
-      title: 'End Date',
-      dataIndex: 'endDate',
-      key: 'endDate'
-    },
-    {
-      title: 'Reason',
-      dataIndex: 'reason',
-      key: 'reason'
-    },
-    {
-      title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
-      render: (status) => {
-        let color = status === 'Approved' ? 'green' : status === 'Rejected' ? 'red' : 'orange';
-        return <Tag color={color}>{status}</Tag>;
-      }
-    }
-  ];
+  const handleCancel = () => {
+    setIsModalVisible(false);
+  };
 
   return (
-    <div className="employee-dashboard">
-      <Title level={2} className="dashboard-title">
-        Welcome to Your Dashboard
-      </Title>
-      <Tabs defaultActiveKey="1" centered>
-        {/* Apply for Leave Tab */}
-        <Tabs.TabPane
-          tab={
-            <span>
-              <PlusOutlined />
-              Apply for Leave
-            </span>
-          }
-          key="1"
-        >
-          <Card className="dashboard-card">
-            <Form layout="vertical" onFinish={handleApplyLeave}>
-              <Form.Item
-                name="type"
-                label="Leave Type"
-                rules={[{ required: true, message: 'Please select a leave type!' }]}
-              >
-                <Select placeholder="Select leave type">
-                  <Option value="sick">Sick</Option>
-                  <Option value="vacation">Vacation</Option>
-                  <Option value="casual">Casual</Option>
-                  <Option value="wfh">Work From Home</Option>
-                </Select>
-              </Form.Item>
-              <Form.Item
-                name="dates"
-                label="Leave Dates"
-                rules={[{ required: true, message: 'Please select leave dates!' }]}
-              >
-                <RangePicker />
-              </Form.Item>
-              <Form.Item
-                name="reason"
-                label="Reason for Leave"
-                rules={[{ required: true, message: 'Please provide a reason!' }]}
-              >
-                <Input.TextArea rows={4} placeholder="Enter reason for leave" />
-              </Form.Item>
-              <Button type="primary" htmlType="submit" block>
-                Submit Application
-              </Button>
-            </Form>
-          </Card>
-        </Tabs.TabPane>
+    <Layout className="employee-dashboard">
+      <Sider width={250} className="dashboard-sider">
+        <div className="logo">
+          <img src={logo} alt="Company Logo" className="logo-image" />
+        </div>
+        <Menu theme="dark" mode="inline" defaultSelectedKeys={['1']}>
+          <Menu.Item key="1" icon={<DashboardOutlined />}>
+            Dashboard
+          </Menu.Item>
+          <Menu.Item key="2" icon={<HistoryOutlined />}>
+            History
+          </Menu.Item>
+        </Menu>
+      </Sider>
 
-        {/* View Leave Status Tab */}
-        <Tabs.TabPane
-          tab={
-            <span>
-              <CalendarOutlined />
-              View Leave Status
-            </span>
-          }
-          key="2"
-        >
-          <Card className="dashboard-card">
-            <Table columns={columns} dataSource={leaveApplications} pagination={{ pageSize: 5 }} />
-          </Card>
-        </Tabs.TabPane>
+      <Layout>
+        <Header className="dashboard-header">
+          <Title level={3} style={{ color: '#fff', margin: 0 }}>Welcome back, Employee 👋</Title>
+          <Button type="primary" className="request-time-off-btn" onClick={showModal}>
+            Request Time Off
+          </Button>
+        </Header>
 
-        {/* Leave Balance Tracker Tab */}
-        <Tabs.TabPane
-          tab={
-            <span>
-              <CheckCircleOutlined />
-              Leave Balance Tracker
-            </span>
-          }
-          key="3"
-        >
-          <Row gutter={[16, 16]}>
-            {Object.entries(leaveBalance).map(([type, balance]) => (
-              <Col xs={24} sm={12} md={6} key={type}>
-                <Card className="leave-balance-card" hoverable>
-                  <Title level={4} className="leave-type">
-                    {type.charAt(0).toUpperCase() + type.slice(1)} Leave
-                  </Title>
-                  <Text className="leave-balance-text">Available: {balance}</Text>
+        <Content className="dashboard-content">
+          <div style={{ textAlign: 'center', marginBottom: 30 }}>
+            <Title level={4}>Leave Usage Summary</Title>
+            <Row justify="center" gutter={16}>
+              {leaveBalances.map((leave) => {
+                const usedPercentage = Math.round((leave.used / leave.total) * 100) || 0;
+                return (
+                  <Col key={leave.type}>
+                    <Progress type="circle" percent={usedPercentage} format={percent => `${percent}%`} />
+                    <div style={{ marginTop: 8 }}>
+                      <Text style={{ color: leave.color }}>{leave.type}</Text>
+                    </div>
+                  </Col>
+                );
+              })}
+            </Row>
+          </div>
+
+          <Row gutter={[16, 16]} justify="center">
+            {leaveBalances.map((leave) => (
+              <Col xs={24} sm={12} md={8} lg={6} key={leave.type}>
+                <Card className="leave-balance-card">
+                  <Title level={5} style={{ color: leave.color }}>{leave.type}</Title>
+                  <Text>Available: {leave.available}</Text><br />
+                  <Text>Used: {leave.used}</Text><br />
+                  <Text>Total: {leave.total}</Text>
                 </Card>
               </Col>
             ))}
           </Row>
-        </Tabs.TabPane>
-      </Tabs>
-    </div>
+
+          <Row gutter={[16, 16]} style={{ marginTop: 20 }}>
+            <Col xs={24} md={12}>
+              <Card title="Who's on Leave" className="dashboard-card" extra={<UserOutlined />}>
+                <Text>On Leave: 0</Text>
+                <br />
+                <Text>Today</Text>
+              </Card>
+            </Col>
+
+            <Col xs={24} md={12}>
+              <Card title="Leave Requests" className="dashboard-card" extra={<CalendarOutlined />}>
+                {leaveRequests.length > 0 ? (
+                  <Table
+                    dataSource={leaveRequests}
+                    columns={[
+                      { title: 'Duration', dataIndex: 'duration', key: 'duration' },
+                      { title: 'Type', dataIndex: 'type', key: 'type' },
+                      { title: 'Days', dataIndex: 'days', key: 'days' },
+                      {
+                        title: 'Status',
+                        dataIndex: 'status',
+                        key: 'status',
+                        render: (status) => (
+                          <Tag color={status === 'Approved' ? 'green' : 'orange'}>{status}</Tag>
+                        )
+                      }
+                    ]}
+                    pagination={false}
+                  />
+                ) : (
+                  <Text>No Leave Requests!!</Text>
+                )}
+              </Card>
+            </Col>
+          </Row>
+        </Content>
+      </Layout>
+
+      <Modal
+        title="Request Time Off"
+        open={isModalVisible}
+        onCancel={handleCancel}
+        footer={null}
+        className="modern-modal"
+      >
+        <Form layout="vertical">
+          <Form.Item
+            name="type"
+            label="Type"
+            rules={[{ required: true, message: 'Please select a leave type!' }]}
+          >
+            <Select placeholder="Select Leave Type">
+              <Option value="casual">Casual Leave</Option>
+              <Option value="sick">Sick Leave</Option>
+              <Option value="earned">Earned Leave</Option>
+            </Select>
+          </Form.Item>
+
+          <Form.Item
+            name="dates"
+            label="Start Date - End Date"
+            rules={[{ required: true, message: 'Please select dates!' }]}
+          >
+            <RangePicker />
+          </Form.Item>
+
+          <Form.Item
+            name="reason"
+            label="Reason"
+            rules={[{ required: true, message: 'Please provide a reason!' }]}
+          >
+            <Input.TextArea rows={4} placeholder="Enter reason for leave" />
+          </Form.Item>
+
+          <Button type="primary" htmlType="submit" block className="modern-button">
+            Done
+          </Button>
+        </Form>
+      </Modal>
+    </Layout>
   );
 };
 
