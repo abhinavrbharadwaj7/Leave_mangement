@@ -196,3 +196,34 @@
   transform: translateY(-5px); /* Lift card on hover */
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15); /* Enhanced shadow on hover */
 }
+
+.history-section {
+  margin-top: 40px;
+}
+
+.history-section h3 {
+  text-align: center;
+  color: #4c6bc5;
+  margin-bottom: 20px;
+  font-size: 20px;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.history-card {
+  background: rgba(255, 255, 255, 0.8); /* Semi-transparent white */
+  backdrop-filter: blur(10px); /* Glassmorphism effect */
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1); /* Modern shadow effect */
+  transition: transform 0.3s ease, box-shadow 0.3s ease; /* Smooth hover effect */
+}
+
+.history-card:hover {
+  transform: translateY(-5px); /* Lift card on hover */
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15); /* Enhanced shadow on hover */
+}

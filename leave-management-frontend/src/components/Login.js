@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Form, Input, Button, message, notification, Spin } from 'antd';
+import { Form, Input, Button, message, notification, Spin, Select } from 'antd';
 import { MailOutlined } from '@ant-design/icons';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
@@ -12,6 +12,9 @@ const Login = () => {
   const [otpTimer, setOtpTimer] = useState(0);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
+  const [userDetails, setUserDetails] = useState(null); // Store user details
+  const [selectedRole, setSelectedRole] = useState(''); // Track selected role
+  const [selectedDepartment, setSelectedDepartment] = useState(''); // Track selected department
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -59,7 +62,6 @@ const Login = () => {
   const handleVerifyOTP = async (values) => {
     try {
       setLoading(true);
-      // Replace with your backend API endpoint
       const response = await axios.post('http://localhost:3001/api/verify-otp', {
         email: form.getFieldValue('email'),
         otp: values.otp
@@ -67,14 +69,10 @@ const Login = () => {
 
       if (response.data.success) {
         message.success('Login successful!');
-        const role = response.data.role;
-
-        // Navigate to the appropriate dashboard
-        if (role === 'manager') {
-          navigate('/manager-dashboard');
-        } else {
-          navigate('/employee-dashboard');
-        }
+        setUserDetails({
+          manager: response.data.manager,
+          department: response.data.department
+        });
       }
     } catch (error) {
       notification.error({
@@ -84,6 +82,18 @@ const Login = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleProceed = () => {
+    if (selectedRole && selectedDepartment) {
+      if (selectedRole === 'manager') {
+        navigate('/manager-dashboard'); // Navigate to manager dashboard
+      } else {
+        navigate('/employee-dashboard'); // Navigate to employee dashboard
+      }
+    } else {
+      message.error('Please select both role and department before proceeding.');
     }
   };
 
@@ -109,65 +119,94 @@ const Login = () => {
           </div>
           <h2>Sign in to your workspace</h2>
           
-          <Form form={form} onFinish={handleVerifyOTP} className="login-form">
-            <Form.Item
-              name="email"
-              rules={[
-                { required: true, message: 'Please input your email!' },
-                { type: 'email', message: 'Please enter a valid email!' },
-                {
-                  pattern: /^[A-Za-z0-9._%+-]+@acquiscompliance\.com$/,
-                  message: 'Please enter a valid Acquis email address'
-                }
-              ]}
-            >
-              <Input
-                prefix={<MailOutlined />}
-                placeholder="Enter your Acquis email"
-                size="large"
-                disabled={isOtpSent}
-              />
-            </Form.Item>
-
-            <Button 
-              type="primary" 
-              onClick={handleGetOTP}
-              disabled={isOtpSent && loading}
-              className="submit-btn"
-              size="large"
-              loading={loading}
-            >
-              {isOtpSent ? 'Resend OTP' : 'Get OTP'}
-            </Button>
-
-            {isOtpSent && (
+          {!userDetails ? (
+            <Form form={form} onFinish={handleVerifyOTP} className="login-form">
               <Form.Item
-                name="otp"
+                name="email"
                 rules={[
-                  { required: true, message: 'Please input your OTP!' },
-                  { pattern: /^\d{6}$/, message: 'OTP must be 6 digits!' }
+                  { required: true, message: 'Please input your email!' },
+                  { type: 'email', message: 'Please enter a valid email!' },
+                  {
+                    pattern: /^[A-Za-z0-9._%+-]+@acquiscompliance\.com$/,
+                    message: 'Please enter a valid Acquis email address'
+                  }
                 ]}
               >
                 <Input
-                  placeholder="Enter 6-digit OTP"
+                  prefix={<MailOutlined />}
+                  placeholder="Enter your Acquis email"
                   size="large"
-                  maxLength={6}
+                  disabled={isOtpSent}
                 />
               </Form.Item>
-            )}
 
-            {isOtpSent && (
               <Button 
                 type="primary" 
-                htmlType="submit"
+                onClick={handleGetOTP}
+                disabled={isOtpSent && loading}
                 className="submit-btn"
                 size="large"
                 loading={loading}
               >
-                Verify OTP
+                {isOtpSent ? 'Resend OTP' : 'Get OTP'}
               </Button>
-            )}
-          </Form>
+
+              {isOtpSent && (
+                <Form.Item
+                  name="otp"
+                  rules={[
+                    { required: true, message: 'Please input your OTP!' },
+                    { pattern: /^\d{6}$/, message: 'OTP must be 6 digits!' }
+                  ]}
+                >
+                  <Input
+                    placeholder="Enter 6-digit OTP"
+                    size="large"
+                    maxLength={6}
+                  />
+                </Form.Item>
+              )}
+
+              {isOtpSent && (
+                <Button 
+                  type="primary" 
+                  htmlType="submit"
+                  className="submit-btn"
+                  size="large"
+                  loading={loading}
+                >
+                  Verify OTP
+                </Button>
+              )}
+            </Form>
+          ) : (
+            <div className="user-details-card">
+              <h3>User Details</h3>
+              <p><b>Manager:</b> {userDetails.manager}</p>
+              <p><b>Select Role:</b></p>
+              <Select
+                placeholder="Select your role"
+                style={{ width: '100%' }}
+                onChange={(value) => setSelectedRole(value)}
+              >
+                <Select.Option value="employee">Employee</Select.Option>
+                <Select.Option value="manager">Manager</Select.Option>
+              </Select>
+              <p style={{ marginTop: '20px' }}><b>Select Department:</b></p>
+              <Select
+                placeholder="Select your department"
+                style={{ width: '100%' }}
+                onChange={(value) => setSelectedDepartment(value)}
+              >
+                <Select.Option value="hr">HR</Select.Option>
+                <Select.Option value="engineering">Engineering</Select.Option>
+                <Select.Option value="sales">Sales</Select.Option>
+              </Select>
+              <Button type="primary" onClick={handleProceed} className="submit-btn" style={{ marginTop: '20px' }}>
+                Proceed to Dashboard
+              </Button>
+            </div>
+          )}
 
           <div className="forgot-password">
             <a href="/forgot-password">Forgot Password?</a>

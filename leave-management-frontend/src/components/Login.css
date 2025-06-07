@@ -113,6 +113,34 @@ body {
     font-size: 12px;
 }
 
+.user-details-card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  margin-top: 20px;
+}
+
+.user-details-card h3 {
+  color: #4c6bc5;
+  margin-bottom: 20px;
+}
+
+.user-details-card p {
+  font-size: 16px;
+  margin: 10px 0;
+}
+
+.user-details-card .ant-select {
+  margin-top: 10px;
+  border-radius: 8px;
+}
+
+.user-details-card .submit-btn {
+  margin-top: 20px;
+}
+
 @media (max-width: 480px) {
     .login-box {
         padding: 30px 20px;
