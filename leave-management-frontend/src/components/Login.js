@@ -18,6 +18,19 @@ const Login = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Check if user is already logged in
+    const savedUserData = localStorage.getItem('userData');
+    if (savedUserData) {
+      const userData = JSON.parse(savedUserData);
+      if (userData.role === 'manager') {
+        navigate('/manager-dashboard');
+      } else {
+        navigate('/employee-dashboard');
+      }
+    }
+  }, [navigate]);
+
+  useEffect(() => {
     if (otpTimer > 0) {
       const timer = setTimeout(() => setOtpTimer(otpTimer - 1), 1000);
       return () => clearTimeout(timer);
@@ -85,12 +98,27 @@ const Login = () => {
     }
   };
 
-  const handleProceed = () => {
+  const handleProceed = async () => {
     if (selectedRole && selectedDepartment) {
-      if (selectedRole === 'manager') {
-        navigate('/manager-dashboard'); // Navigate to manager dashboard
-      } else {
-        navigate('/employee-dashboard'); // Navigate to employee dashboard
+      try {
+        // Save user details locally
+        const userData = {
+          email,
+          role: selectedRole,
+          department: selectedDepartment,
+          manager: userDetails.manager
+        };
+        localStorage.setItem('userData', JSON.stringify(userData));
+
+        // Navigate based on role
+        if (selectedRole === 'manager') {
+          navigate('/manager-dashboard');
+        } else {
+          navigate('/employee-dashboard');
+        }
+      } catch (error) {
+        message.error('Error saving user details');
+        console.error('Error:', error);
       }
     } else {
       message.error('Please select both role and department before proceeding.');
