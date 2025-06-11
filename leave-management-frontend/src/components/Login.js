@@ -59,14 +59,19 @@ const Login = () => {
         });
       }
     } catch (error) {
-      if (error.errorFields) {
-        return; // Form validation error
+      if (error.response) {
+        notification.error({
+          message: 'Error',
+          description: error.response.data.message,
+          placement: 'top',
+        });
+      } else {
+        notification.error({
+          message: 'Error',
+          description: 'Something went wrong. Please try again or contact support.',
+          placement: 'top',
+        });
       }
-      notification.error({
-        message: 'Failed to send OTP',
-        description: error.response?.data?.message || 'Please try again later',
-        placement: 'top',
-      });
     } finally {
       setLoading(false);
     }
@@ -82,15 +87,28 @@ const Login = () => {
 
       if (response.data.success) {
         message.success('Login successful!');
-        setUserDetails({
-          manager: response.data.manager,
-          department: response.data.department
-        });
+        const userData = {
+          email: form.getFieldValue('email'),
+          role: response.data.role,
+          department: response.data.department,
+          manager: response.data.manager
+        };
+        
+        localStorage.setItem('userData', JSON.stringify(userData));
+
+        // Redirect based on role
+        if (response.data.role === 'admin') {
+          navigate('/admin-dashboard');
+        } else if (response.data.role === 'manager') {
+          navigate('/manager-dashboard');
+        } else {
+          navigate('/employee-dashboard');
+        }
       }
     } catch (error) {
       notification.error({
         message: 'Verification Failed',
-        description: error.response?.data?.message || 'Invalid OTP',
+        description: error.response?.data?.message || 'Something went wrong. Please try again.',
         placement: 'top',
       });
     } finally {

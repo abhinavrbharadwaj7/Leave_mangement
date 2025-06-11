@@ -1,5 +1,5 @@
 // EmployeeDashboard.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Layout, Menu, Button, Card, Progress, DatePicker, Select, Modal, Input } from 'antd';
 import {
   UserOutlined,
@@ -7,6 +7,7 @@ import {
   CalendarOutlined,
   FileAddOutlined
 } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import './EmployeeDashboard.css';
 
 const { Header, Sider, Content } = Layout;
@@ -14,9 +15,23 @@ const { Option } = Select;
 const { RangePicker } = DatePicker;
 
 const EmployeeDashboard = () => {
+  const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [activeSection, setActiveSection] = useState('dashboard'); // Track active section
+
+  useEffect(() => {
+    const userData = localStorage.getItem('userData');
+    if (!userData) {
+      navigate('/');
+      return;
+    }
+    
+    const user = JSON.parse(userData);
+    if (user.role !== 'employee' && user.role !== 'manager') {
+      navigate('/');
+    }
+  }, [navigate]);
 
   const showModal = () => setModalVisible(true);
   const handleCancel = () => setModalVisible(false);
