@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const transporter = require('../config/emailConfig');
+const LeaveRequest = require('../models/LeaveRequest'); // Make sure this is at the top
 
 // Generate and send OTP
 router.post('/send-otp', async (req, res) => {
@@ -108,6 +109,119 @@ router.post('/save-user-details', async (req, res) => {
   } catch (error) {
     console.error('Error in save-user-details:', error); // Debug log
     res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Update user details
+router.post('/update-user-details', async (req, res) => {
+  try {
+    const { email, role, department } = req.body;
+    console.log('Updating user details:', { email, role, department });
+
+    // Find the user by email
+    const user = await User.findOne({ email });
+    if (!user) {
+      console.log('User not found:', email);
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Update the user's role and department
+    user.role = role;
+    user.department = department;
+    user.isVerified = true;
+    await user.save();
+
+    console.log('User updated successfully:', user);
+
+    res.json({
+      success: true,
+      message: 'User details updated successfully',
+      user: {
+        email: user.email,
+        role: user.role,
+        department: user.department,
+        manager: user.manager
+      }
+    });
+  } catch (error) {
+    console.error('Error updating user details:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update user details'
+    });
+  }
+});
+
+// Add all leave requests route
+router.get('/all-leave-requests', async (req, res) => {
+  try {
+    const leaveRequests = await LeaveRequest.find({})
+      .sort({ startDate: 1 });
+    console.log('Fetched all leave requests:', leaveRequests.length);
+    res.json({
+      success: true,
+      leaveRequests
+    });
+  } catch (error) {
+    console.error('Error fetching all leave requests:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch leave requests'
+    });
+  }
+});
+
+// Add user's leave requests route
+router.get('/leave-requests/:email', async (req, res) => {
+  try {
+    const { email } = req.params;
+    const leaveRequests = await LeaveRequest.find({ email })
+      .sort({ createdAt: -1 });
+    res.json({
+      success: true,
+      leaveRequests
+    });
+  } catch (error) {
+    console.error('Error fetching user leave requests:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch leave requests'
+    });
+  }
+});
+
+// Add create leave request route
+router.post('/leave-request', async (req, res) => {
+  try {
+    const { email, leaveType, startDate, endDate, reason } = req.body;
+    console.log('Creating leave request:', { email, leaveType, startDate, endDate });
+
+    const leaveRequest = new LeaveRequest({
+      email,
+      leaveType,
+      startDate: new Date(startDate),
+      endDate: new Date(endDate),
+      reason,
+      status: 'pending'
+    });
+
+    await leaveRequest.save();
+    console.log('Leave request created successfully');
+
+    res.status(201).json({
+      success: true,
+      message: 'Leave request submitted successfully',
+      data: leaveRequest
+    });
+  } catch (error) {
+    console.error('Error creating leave request:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to submit leave request'
+    });
   }
 });
 

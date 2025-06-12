@@ -15,19 +15,44 @@ const Login = () => {
   const [userDetails, setUserDetails] = useState(null); // Store user details
   const [selectedRole, setSelectedRole] = useState(''); // Track selected role
   const [selectedDepartment, setSelectedDepartment] = useState(''); // Track selected department
+  const [initializing, setInitializing] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check if user is already logged in
-    const savedUserData = localStorage.getItem('userData');
-    if (savedUserData) {
-      const userData = JSON.parse(savedUserData);
-      if (userData.role === 'manager') {
-        navigate('/manager-dashboard');
-      } else {
-        navigate('/employee-dashboard');
+    const checkAuth = async () => {
+      try {
+        const savedUserData = localStorage.getItem('userData');
+        if (savedUserData) {
+          const userData = JSON.parse(savedUserData);
+          
+          // Check if user exists in MongoDB
+          const response = await axios.get(`http://localhost:3001/api/check-user/${userData.email}`);
+          
+          if (!response.data.exists) {
+            // User doesn't exist in MongoDB, clear localStorage
+            localStorage.removeItem('userData');
+            setInitializing(false);
+            return;
+          }
+
+          // User exists, proceed with navigation
+          if (userData.role === 'admin') {
+            navigate('/admin-dashboard');
+          } else if (userData.role === 'manager') {
+            navigate('/manager-dashboard');
+          } else {
+            navigate('/employee-dashboard');
+          }
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        // Clear localStorage on error
+        localStorage.removeItem('userData');
+      } finally {
+        setInitializing(false);
       }
-    }
+    };
+    checkAuth();
   }, [navigate]);
 
   useEffect(() => {
@@ -85,27 +110,38 @@ const Login = () => {
         otp: values.otp
       });
 
-      if (response.data.success) {
-        message.success('Login successful!');
-        const userData = {
-          email: form.getFieldValue('email'),
-          role: response.data.role,
-          department: response.data.department,
-          manager: response.data.manager
-        };
-        
-        localStorage.setItem('userData', JSON.stringify(userData));
+      console.log('Verification response:', response.data); // Debug log
 
-        // Redirect based on role
-        if (response.data.role === 'admin') {
-          navigate('/admin-dashboard');
-        } else if (response.data.role === 'manager') {
-          navigate('/manager-dashboard');
+      if (response.data.success) {
+        if (!response.data.role || response.data.role === 'Not Assigned') {
+          // New user needs to select role
+          setUserDetails({
+            email: form.getFieldValue('email'),
+            manager: response.data.manager || 'Not Assigned'
+          });
         } else {
-          navigate('/employee-dashboard');
+          // Existing user with role
+          const userData = {
+            email: form.getFieldValue('email'),
+            role: response.data.role,
+            department: response.data.department,
+            manager: response.data.manager
+          };
+          
+          localStorage.setItem('userData', JSON.stringify(userData));
+          
+          if (response.data.role === 'admin') {
+            navigate('/admin-dashboard');
+          } else if (response.data.role === 'manager') {
+            navigate('/manager-dashboard');
+          } else {
+            navigate('/employee-dashboard');
+          }
         }
+        message.success('OTP verified successfully');
       }
     } catch (error) {
+      console.error('Verification error:', error);
       notification.error({
         message: 'Verification Failed',
         description: error.response?.data?.message || 'Something went wrong. Please try again.',
@@ -119,24 +155,37 @@ const Login = () => {
   const handleProceed = async () => {
     if (selectedRole && selectedDepartment) {
       try {
-        // Save user details locally
-        const userData = {
+        setLoading(true);
+        const response = await axios.post('http://localhost:3001/api/update-user-details', {
           email,
           role: selectedRole,
-          department: selectedDepartment,
-          manager: userDetails.manager
-        };
-        localStorage.setItem('userData', JSON.stringify(userData));
+          department: selectedDepartment
+        });
 
-        // Navigate based on role
-        if (selectedRole === 'manager') {
-          navigate('/manager-dashboard');
-        } else {
-          navigate('/employee-dashboard');
+        if (response.data.success) {
+          const userData = {
+            email,
+            role: selectedRole,
+            department: selectedDepartment,
+            manager: userDetails.manager
+          };
+
+          localStorage.clear();
+          localStorage.setItem('userData', JSON.stringify(userData));
+          message.success('Details updated successfully');
+
+          // Strict navigation based on role
+          if (selectedRole === 'manager') {
+            navigate('/manager-dashboard', { replace: true });
+          } else if (selectedRole === 'employee') {
+            navigate('/employee-dashboard', { replace: true });
+          }
         }
       } catch (error) {
-        message.error('Error saving user details');
+        message.error('Error saving user details. Please try again.');
         console.error('Error:', error);
+      } finally {
+        setLoading(false);
       }
     } else {
       message.error('Please select both role and department before proceeding.');
@@ -148,6 +197,14 @@ const Login = () => {
       handleGetOTP();
     }
   };
+
+  if (initializing) {
+    return (
+      <div className="loading-container">
+        <Spin size="large" />
+      </div>
+    );
+  }
 
   return (
     <div className="container">

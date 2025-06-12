@@ -141,6 +141,14 @@ body {
   margin-top: 20px;
 }
 
+.loading-container {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(90deg, #e2e2e2, #c9d6ff);
+}
+
 @media (max-width: 480px) {
     .login-box {
         padding: 30px 20px;
