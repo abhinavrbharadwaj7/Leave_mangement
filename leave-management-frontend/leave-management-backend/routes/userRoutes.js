@@ -197,7 +197,19 @@ router.get('/leave-requests/:email', async (req, res) => {
 router.post('/leave-request', async (req, res) => {
   try {
     const { email, leaveType, startDate, endDate, reason } = req.body;
-    console.log('Creating leave request:', { email, leaveType, startDate, endDate });
+    console.log('Creating leave request:', { email, leaveType, startDate, endDate, reason });
+
+    // Log current mongoose connection and collection
+    const mongoose = require('mongoose');
+    console.log('Mongoose DB:', mongoose.connection.name);
+    console.log('LeaveRequest collection:', LeaveRequest.collection.name);
+
+    if (!email || !leaveType || !startDate || !endDate || !reason) {
+      return res.status(400).json({
+        success: false,
+        message: 'All fields are required'
+      });
+    }
 
     const leaveRequest = new LeaveRequest({
       email,
@@ -209,7 +221,7 @@ router.post('/leave-request', async (req, res) => {
     });
 
     await leaveRequest.save();
-    console.log('Leave request created successfully');
+    console.log('Leave request created successfully:', leaveRequest);
 
     res.status(201).json({
       success: true,

@@ -1,32 +1,35 @@
 const express = require('express');
-const mongoose = require('mongoose');
-const bodyParser = require('body-parser');
 const cors = require('cors');
+const mongoose = require('mongoose');
 require('dotenv').config();
 
 const app = express();
 
 // Middleware
 app.use(cors());
-app.use(bodyParser.json());
+app.use(express.json());
 
-// MongoDB Connection with error handling
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => {
-    console.log('Successfully connected to MongoDB.');
-  })
-  .catch(err => {
-    console.error('MongoDB connection error:', err);
-  });
+// Import routes
+const userRoutes = require('./routes/userRoutes');
 
-// Test route
-app.get('/test', (req, res) => {
-  res.send('Server is running');
+// Use routes
+app.use('/api', userRoutes);
+
+// MongoDB Connection
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => console.log('Connected to MongoDB'))
+  .catch((error) => console.error('MongoDB connection error:', error));
+
+// Basic route for testing
+app.get('/', (req, res) => {
+  res.send('Leave Management API is running');
 });
 
-// Import and use routes
-const userRoutes = require('./routes/userRoutes');
-app.use('/api', userRoutes);
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ success: false, message: 'Something went wrong!' });
+});
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
