@@ -6,6 +6,12 @@ import { useNavigate } from 'react-router-dom';
 import './Login.css';
 import logo from '../assets/unnamed.jpg';
 
+// Use window.location.hostname to determine environment
+const BACKEND_URL =
+  window.location.hostname === "localhost"
+    ? "http://localhost:3001"
+    : "https://leave-management-blond.vercel.app";
+
 const Login = () => {
   const [form] = Form.useForm();
   const [isOtpSent, setIsOtpSent] = useState(false);
@@ -70,7 +76,7 @@ const Login = () => {
       setLoading(true);
       
       // Replace with your backend API endpoint
-      const response = await axios.post('http://localhost:3001/api/send-otp', {
+      const response = await axios.post(`${BACKEND_URL}/api/send-otp`, {
         email: emailValue
       });
 
@@ -105,7 +111,7 @@ const Login = () => {
   const handleVerifyOTP = async (values) => {
     try {
       setLoading(true);
-      const response = await axios.post('http://localhost:3001/api/verify-otp', {
+      const response = await axios.post(`${BACKEND_URL}/api/verify-otp`, {
         email: form.getFieldValue('email'),
         otp: values.otp
       });
@@ -156,7 +162,7 @@ const Login = () => {
     if (selectedRole && selectedDepartment) {
       try {
         setLoading(true);
-        const response = await axios.post('http://localhost:3001/api/update-user-details', {
+        const response = await axios.post(`${BACKEND_URL}/api/update-user-details`, {
           email,
           role: selectedRole,
           department: selectedDepartment

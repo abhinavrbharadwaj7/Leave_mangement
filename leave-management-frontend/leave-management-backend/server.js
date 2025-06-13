@@ -6,7 +6,13 @@ require('dotenv').config();
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: [
+    'leave-mangement-blond.vercel.app', // <-- your Vercel frontend URL
+    'http://localhost:3000' // for local dev
+  ],
+  credentials: true
+}));
 app.use(express.json());
 
 // Import routes
