@@ -30,10 +30,10 @@ const Login = () => {
         const savedUserData = localStorage.getItem('userData');
         if (savedUserData) {
           const userData = JSON.parse(savedUserData);
-          
-          // Check if user exists in MongoDB
-          const response = await axios.get(`http://localhost:3001/api/check-user/${userData.email}`);
-          
+
+          // Use dynamic BACKEND_URL here
+          const response = await axios.get(`${BACKEND_URL}/api/check-user/${userData.email}`);
+
           if (!response.data.exists) {
             // User doesn't exist in MongoDB, clear localStorage
             localStorage.removeItem('userData');
