@@ -15,6 +15,11 @@ const { Header, Sider, Content } = Layout;
 const { Option } = Select;
 const { RangePicker } = DatePicker;
 
+const BACKEND_URL =
+  window.location.hostname === "localhost"
+    ? "http://localhost:3001"
+    : "https://leave-management-blond.vercel.app";
+
 const EmployeeDashboard = () => {
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
@@ -63,7 +68,7 @@ const EmployeeDashboard = () => {
     try {
       const userData = JSON.parse(localStorage.getItem('userData'));
       if (!userData?.email) return;
-      const response = await axios.get(`http://localhost:3001/api/leave-requests/${userData.email}`);
+      const response = await axios.get(`${BACKEND_URL}/api/leave-requests/${userData.email}`);
       if (response.data.success) {
         setLeaveHistory(response.data.leaveRequests);
       }
@@ -72,10 +77,10 @@ const EmployeeDashboard = () => {
     }
   };
 
-  // Add this function to fetch all leave requests
+  // Fetch all leave requests
   const fetchAllLeaveRequests = async () => {
     try {
-      const response = await axios.get('http://localhost:3001/api/all-leave-requests');
+      const response = await axios.get(`${BACKEND_URL}/api/all-leave-requests`);
       if (response.data.success) {
         setAllLeaveRequests(response.data.leaveRequests);
       }
@@ -103,7 +108,7 @@ const EmployeeDashboard = () => {
         dateRange: values.dateRange.map(date => date.format('YYYY-MM-DD'))
       });
 
-      const response = await axios.post('http://localhost:3001/api/leave-request', {
+      const response = await axios.post(`${BACKEND_URL}/api/leave-request`, {
         email: userData.email,
         leaveType: values.leaveType,
         startDate: values.dateRange[0].format('YYYY-MM-DD'),
