@@ -34,6 +34,7 @@ const EmployeeDashboard = () => {
   const [reason, setReason] = useState('');
   const [leaveHistory, setLeaveHistory] = useState([]);
   const [allLeaveRequests, setAllLeaveRequests] = useState([]);
+  const [userData, setUserData] = useState(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -90,9 +91,27 @@ const EmployeeDashboard = () => {
     }
   };
 
+  // Fetch user data
+  const fetchUserData = async () => {
+    try {
+      const storedData = JSON.parse(localStorage.getItem('userData'));
+      if (!storedData?.email) return;
+
+      const response = await axios.get(`${BACKEND_URL}/api/user/${storedData.email}`);
+      if (response.data.success) {
+        setUserData(response.data.user);
+        setUserEmail(response.data.user.email);
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      message.error('Failed to load user details');
+    }
+  };
+
   useEffect(() => {
     fetchLeaveHistory();
     fetchAllLeaveRequests();
+    fetchUserData();
   }, []);
 
   const handleLeaveSubmit = async (values) => {
@@ -114,7 +133,8 @@ const EmployeeDashboard = () => {
         leaveType: values.leaveType,
         startDate: values.dateRange[0].format('YYYY-MM-DD'),
         endDate: values.dateRange[1].format('YYYY-MM-DD'),
-        reason: values.reason
+        reason: values.reason,
+        manager: userData.manager // <-- include manager
       });
 
       if (response.data.success) {
@@ -155,8 +175,15 @@ const EmployeeDashboard = () => {
         <Header className="dashboard-header">
           <div className="header-left">
             <span className="welcome-text">Welcome back,</span>
-            <span className="user-name">{userEmail.split('@')[0]}</span>
+            <span className="user-name">
+              {userData ? `${userData.email.split('@')[0]} (${userData.role})` : 'User'}
+            </span>
             <span className="wave-emoji">👋</span>
+          </div>
+          <div className="user-info">
+            <span className="department-tag">
+              {userData?.department || 'Loading...'}
+            </span>
           </div>
           <div className="header-right">
             <Button type="primary" icon={<FileAddOutlined />} onClick={showModal} className="request-btn">

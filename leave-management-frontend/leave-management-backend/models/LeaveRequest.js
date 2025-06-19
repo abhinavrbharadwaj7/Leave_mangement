@@ -28,6 +28,14 @@ const leaveRequestSchema = new mongoose.Schema({
     enum: ['pending', 'approved', 'rejected'],
     default: 'pending'
   },
+  manager: {
+    type: String,
+    required: true // manager's email
+  },
+  managerComment: {
+    type: String,
+    default: ''
+  },
   createdAt: {
     type: Date,
     default: Date.now
