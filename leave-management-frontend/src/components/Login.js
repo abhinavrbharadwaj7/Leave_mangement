@@ -8,9 +8,10 @@ import logo from '../assets/unnamed.jpg';
 
 // Use window.location.hostname to determine environment
 const BACKEND_URL =
-  window.location.hostname === "localhost"
+  process.env.REACT_APP_BACKEND_URL ||
+  (window.location.hostname === "localhost"
     ? "http://localhost:3001"
-    : "https://leave-management-blond.vercel.app";
+    : "https://leave-mangement.onrender.com");
 
 const Login = () => {
   const [form] = Form.useForm();
