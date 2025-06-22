@@ -309,13 +309,13 @@ router.get('/manager-dashboard/:managerEmail', async (req, res) => {
       });
     }
 
-    // Get employees under this manager
+    // Get all employees who report to this manager
     const teamMembers = await User.find({ 
-      department: manager.department,
-      role: 'employee'  // Only get employees
+      role: 'employee',
+      manager: managerEmail
     }).select('email role department');
 
-    // Get leave requests for team members
+    // Get leave requests for these employees
     const leaveRequests = await LeaveRequest.find({
       email: { $in: teamMembers.map(member => member.email) }
     }).sort({ createdAt: -1 });
@@ -344,6 +344,22 @@ router.get('/manager-dashboard/:managerEmail', async (req, res) => {
       success: false,
       message: 'Failed to fetch manager dashboard data'
     });
+  }
+});
+
+// Escalate leave request: approve on escalation
+router.post('/escalate-leave-request', async (req, res) => {
+  try {
+    const { id } = req.body;
+    const leaveRequest = await LeaveRequest.findById(id);
+    if (!leaveRequest) {
+      return res.status(404).json({ success: false, message: 'Leave request not found' });
+    }
+    leaveRequest.status = 'approved'; // Approve the leave
+    await leaveRequest.save();
+    res.json({ success: true, message: 'Request escalated and approved' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Escalation failed' });
   }
 });
 

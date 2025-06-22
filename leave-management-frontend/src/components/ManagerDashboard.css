@@ -261,3 +261,44 @@ h2 {
   font-weight: 600;
   margin-bottom: 20px;
 }
+
+.employee-name {
+  font-weight: 600;
+  color: #333;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 4px 12px;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.employee-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.team-section .ant-table-tbody > tr:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.team-section .ant-table-row {
+  cursor: pointer;
+}
+
+.team-section .ant-tag {
+  margin: 0;
+  padding: 2px 12px;
+  border-radius: 12px;
+}
+
+.custom-approve-btn {
+  background-color: #1976d2 !important; /* Custom blue */
+  border-color: #1976d2 !important;
+  color: #fff !important;
+}
+.custom-approve-btn:hover, .custom-approve-btn:focus {
+  background-color: #1565c0 !important; /* Slightly darker blue on hover */
+  border-color: #1565c0 !important;
+  color: #fff !important;
+}

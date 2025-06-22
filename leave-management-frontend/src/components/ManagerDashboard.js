@@ -22,6 +22,18 @@ const ManagerDashboard = () => {
   const [calendarData, setCalendarData] = useState([]);
   const [managerData, setManagerData] = useState(null);
   const [teamMembers, setTeamMembers] = useState([]);
+  const [employeeDetails, setEmployeeDetails] = useState([]); // New state for employee details
+
+  // Format employee data
+  const formatEmployeeData = (employee) => {
+    return {
+      name: employee.email.split('@')[0],
+      email: employee.email,
+      role: employee.role,
+      department: employee.department,
+      status: employee.status
+    };
+  };
 
   const fetchDashboardData = async () => {
     try {
@@ -33,6 +45,11 @@ const ManagerDashboard = () => {
       if (response.data.success) {
         const { manager, teamMembers, leaveRequests, stats } = response.data.data;
         setManagerData(manager);
+
+        // Format and set employee details
+        const formattedEmployees = teamMembers.map(employee => formatEmployeeData(employee));
+        setEmployeeDetails(formattedEmployees);
+
         setTeamMembers(teamMembers);
         setLeaveRequests(leaveRequests);
         setCalendarData(leaveRequests);
@@ -144,9 +161,9 @@ const ManagerDashboard = () => {
               <Button
                 type="primary"
                 size="small"
+                className="custom-approve-btn"
                 onClick={() => handleAction(record._id, 'approved')}
                 style={{ marginRight: 8 }}
-                danger={isOverlapping(record)}
               >
                 Approve
               </Button>
@@ -162,26 +179,32 @@ const ManagerDashboard = () => {
     }
   ];
 
-  // Update the team members table columns and data
+  // Update team columns to use formatted employee data
   const teamColumns = [
     { 
       title: 'Name', 
-      dataIndex: 'email',
       key: 'name',
-      render: (email) => email.split('@')[0]
-    },
-    { title: 'Email', dataIndex: 'email', key: 'email' },
-    { 
-      title: 'Role', 
-      dataIndex: 'role', 
-      key: 'role',
-      render: (role) => <Tag color={role === 'employee' ? 'blue' : 'green'}>{role}</Tag>
+      render: (_, record) => (
+        <span className="employee-name">
+          {record.email.split('@')[0]}
+        </span>
+      )
     },
     { 
       title: 'Department', 
-      dataIndex: 'department', 
       key: 'department',
-      render: (dept) => <Tag color="purple">{formatDepartment(dept)}</Tag>
+      render: (_, record) => (
+        <Tag color="purple">{formatDepartment(record.department)}</Tag>
+      )
+    },
+    { 
+      title: 'Role', 
+      key: 'role',
+      render: (_, record) => (
+        <Tag color={record.role === 'employee' ? 'blue' : 'green'}>
+          {record.role}
+        </Tag>
+      )
     },
     { 
       title: 'Status',
@@ -195,9 +218,11 @@ const ManagerDashboard = () => {
         );
 
         return (
-          <Tag color={hasActiveLeave ? 'red' : 'green'}>
-            {hasActiveLeave ? 'On Leave' : 'Available'}
-          </Tag>
+          <div className="employee-status">
+            <Tag color={hasActiveLeave ? 'red' : 'green'}>
+              {hasActiveLeave ? 'On Leave' : 'Available'}
+            </Tag>
+          </div>
         );
       }
     }
@@ -283,9 +308,10 @@ const ManagerDashboard = () => {
         <h2>Team Members</h2>
         <Table
           columns={teamColumns}
-          dataSource={teamMembers}
+          dataSource={employeeDetails}
           rowKey="email"
           pagination={false}
+          loading={loading}
         />
       </div>
 
@@ -308,4 +334,3 @@ const ManagerDashboard = () => {
 };
 
 export default ManagerDashboard;
-

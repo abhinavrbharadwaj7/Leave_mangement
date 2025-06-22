@@ -176,7 +176,9 @@ const EmployeeDashboard = () => {
           <div className="header-left">
             <span className="welcome-text">Welcome back,</span>
             <span className="user-name">
-              {userData ? `${userData.email.split('@')[0]} (${userData.role})` : 'User'}
+              {localStorage.getItem('userData') ? 
+                JSON.parse(localStorage.getItem('userData')).email.split('@')[0] : 
+                'Employee'}
             </span>
             <span className="wave-emoji">👋</span>
           </div>
