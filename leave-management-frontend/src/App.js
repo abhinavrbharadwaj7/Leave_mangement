@@ -5,6 +5,7 @@ import ManagerDashboard from './components/ManagerDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import { ConfigProvider } from 'antd';
 import 'antd/dist/reset.css';
+import AdminDashboard from './components/AdminDashboard';
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
               </ProtectedRoute>
             } 
           />
+          <Route path="/admin" element={<AdminDashboard />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </Router>

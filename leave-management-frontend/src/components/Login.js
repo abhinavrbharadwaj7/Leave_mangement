@@ -44,7 +44,7 @@ const Login = () => {
 
           // User exists, proceed with navigation
           if (userData.role === 'admin') {
-            navigate('/admin-dashboard');
+            navigate('/admin');
           } else if (userData.role === 'manager') {
             navigate('/manager-dashboard');
           } else {
@@ -117,33 +117,24 @@ const Login = () => {
         otp: values.otp
       });
 
-      console.log('Verification response:', response.data); // Debug log
-
       if (response.data.success) {
-        if (!response.data.role || response.data.role === 'Not Assigned') {
-          // New user needs to select role
-          setUserDetails({
-            email: form.getFieldValue('email'),
-            manager: response.data.manager || 'Not Assigned'
-          });
+        if (!response.data.role || response.data.role === 'Not Assigned' || !response.data.department || response.data.department === 'Not Assigned') {
+          message.error('Your account is not fully set up. Please contact admin.');
+          return;
+        }
+        const userData = {
+          email: form.getFieldValue('email'),
+          role: response.data.role,
+          department: response.data.department,
+          manager: response.data.manager
+        };
+        localStorage.setItem('userData', JSON.stringify(userData));
+        if (response.data.role === 'admin') {
+          navigate('/admin');
+        } else if (response.data.role === 'manager') {
+          navigate('/manager-dashboard');
         } else {
-          // Existing user with role
-          const userData = {
-            email: form.getFieldValue('email'),
-            role: response.data.role,
-            department: response.data.department,
-            manager: response.data.manager
-          };
-          
-          localStorage.setItem('userData', JSON.stringify(userData));
-          
-          if (response.data.role === 'admin') {
-            navigate('/admin-dashboard');
-          } else if (response.data.role === 'manager') {
-            navigate('/manager-dashboard');
-          } else {
-            navigate('/employee-dashboard');
-          }
+          navigate('/employee-dashboard');
         }
         message.success('OTP verified successfully');
       }
@@ -228,100 +219,65 @@ const Login = () => {
             />
           </div>
           <h2>Sign in to your workspace</h2>
-          
-          {!userDetails ? (
-            <Form form={form} onFinish={handleVerifyOTP} className="login-form">
+          <Form form={form} onFinish={handleVerifyOTP} className="login-form">
+            <Form.Item
+              name="email"
+              rules={[
+                { required: true, message: 'Please input your email!' },
+                { type: 'email', message: 'Please enter a valid email!' },
+                {
+                  pattern: /^[A-Za-z0-9._%+-]+@acquiscompliance\.com$/,
+                  message: 'Please enter a valid Acquis email address'
+                }
+              ]}
+            >
+              <Input
+                prefix={<MailOutlined />}
+                placeholder="Enter your Acquis email"
+                size="large"
+                disabled={isOtpSent}
+              />
+            </Form.Item>
+            <Button 
+              type="primary" 
+              onClick={handleGetOTP}
+              disabled={isOtpSent && loading}
+              className="submit-btn"
+              size="large"
+              loading={loading}
+            >
+              {isOtpSent ? 'Resend OTP' : 'Get OTP'}
+            </Button>
+            {isOtpSent && (
               <Form.Item
-                name="email"
+                name="otp"
                 rules={[
-                  { required: true, message: 'Please input your email!' },
-                  { type: 'email', message: 'Please enter a valid email!' },
-                  {
-                    pattern: /^[A-Za-z0-9._%+-]+@acquiscompliance\.com$/,
-                    message: 'Please enter a valid Acquis email address'
-                  }
+                  { required: true, message: 'Please input your OTP!' },
+                  { pattern: /^\d{6}$/, message: 'OTP must be 6 digits!' }
                 ]}
               >
                 <Input
-                  prefix={<MailOutlined />}
-                  placeholder="Enter your Acquis email"
+                  placeholder="Enter 6-digit OTP"
                   size="large"
-                  disabled={isOtpSent}
+                  maxLength={6}
                 />
               </Form.Item>
-
+            )}
+            {isOtpSent && (
               <Button 
                 type="primary" 
-                onClick={handleGetOTP}
-                disabled={isOtpSent && loading}
+                htmlType="submit"
                 className="submit-btn"
                 size="large"
                 loading={loading}
               >
-                {isOtpSent ? 'Resend OTP' : 'Get OTP'}
+                Verify OTP
               </Button>
-
-              {isOtpSent && (
-                <Form.Item
-                  name="otp"
-                  rules={[
-                    { required: true, message: 'Please input your OTP!' },
-                    { pattern: /^\d{6}$/, message: 'OTP must be 6 digits!' }
-                  ]}
-                >
-                  <Input
-                    placeholder="Enter 6-digit OTP"
-                    size="large"
-                    maxLength={6}
-                  />
-                </Form.Item>
-              )}
-
-              {isOtpSent && (
-                <Button 
-                  type="primary" 
-                  htmlType="submit"
-                  className="submit-btn"
-                  size="large"
-                  loading={loading}
-                >
-                  Verify OTP
-                </Button>
-              )}
-            </Form>
-          ) : (
-            <div className="user-details-card">
-              <h3>User Details</h3>
-              <p><b>Manager:</b> {userDetails.manager}</p>
-              <p><b>Select Role:</b></p>
-              <Select
-                placeholder="Select your role"
-                style={{ width: '100%' }}
-                onChange={(value) => setSelectedRole(value)}
-              >
-                <Select.Option value="employee">Employee</Select.Option>
-                <Select.Option value="manager">Manager</Select.Option>
-              </Select>
-              <p style={{ marginTop: '20px' }}><b>Select Department:</b></p>
-              <Select
-                placeholder="Select your department"
-                style={{ width: '100%' }}
-                onChange={(value) => setSelectedDepartment(value)}
-              >
-                <Select.Option value="hr">HR</Select.Option>
-                <Select.Option value="engineering">Engineering</Select.Option>
-                <Select.Option value="sales">Sales</Select.Option>
-              </Select>
-              <Button type="primary" onClick={handleProceed} className="submit-btn" style={{ marginTop: '20px' }}>
-                Proceed to Dashboard
-              </Button>
-            </div>
-          )}
-
+            )}
+          </Form>
           <div className="forgot-password">
             <a href="/forgot-password">Forgot Password?</a>
           </div>
-          
           <div className="footer">
             © Copyright Acquis Compliance 2020 - {new Date().getFullYear()}
           </div>

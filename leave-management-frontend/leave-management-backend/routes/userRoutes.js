@@ -10,6 +10,13 @@ router.post('/send-otp', async (req, res) => {
     const { email } = req.body;
     console.log('Generating OTP for:', email);
 
+    // Find the user by email first
+    const user = await User.findOne({ email });
+    if (!user) {
+      // If user does not exist, return an error
+      return res.status(404).json({ success: false, message: 'User not registered. Please contact admin.' });
+    }
+
     // Generate a 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     console.log('Generated OTP:', otp); // For testing purposes
@@ -29,23 +36,12 @@ router.post('/send-otp', async (req, res) => {
     await transporter.sendMail(mailOptions);
     console.log('OTP email sent successfully');
 
-    // Save or update user with OTP
-    let user = await User.findOne({ email });
-    if (!user) {
-      user = new User({
-        email,
-        otp: {
-          code: otp,
-          expiresAt: new Date(Date.now() + 10 * 60 * 1000) // 10 minutes expiry
-        }
-      });
-    } else {
-      user.otp = {
-        code: otp,
-        expiresAt: new Date(Date.now() + 10 * 60 * 1000)
-      };
-    }
-
+    // Save OTP to the existing user document
+    user.otp = {
+      code: otp,
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000)
+    };
+    
     await user.save();
     console.log('User saved with OTP:', user);
 
@@ -78,8 +74,9 @@ router.post('/verify-otp', async (req, res) => {
     if (user.otp.code === otp && user.otp.expiresAt > new Date()) {
       res.json({
         success: true,
-        manager: 'John Doe', // Replace with actual manager data
-        department: 'Engineering'
+        role: user.role || 'Not Assigned',
+        department: user.department || 'Not Assigned',
+        manager: user.manager || 'Not Assigned'
       });
     } else {
       res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
@@ -360,6 +357,25 @@ router.post('/escalate-leave-request', async (req, res) => {
     res.json({ success: true, message: 'Request escalated and approved' });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Escalation failed' });
+  }
+});
+
+// Get all employees and managers
+router.get('/all-users', async (req, res) => {
+  try {
+    const users = await User.find({
+      role: { $in: ['employee', 'manager'] }
+    }).select('-otp -__v'); // Exclude sensitive fields
+    res.json({
+      success: true,
+      users
+    });
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch users'
+    });
   }
 });
 

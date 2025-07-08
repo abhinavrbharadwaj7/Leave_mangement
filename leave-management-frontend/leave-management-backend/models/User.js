@@ -9,7 +9,7 @@ const userSchema = new mongoose.Schema({
   role: { 
     type: String, 
     required: false, // Changed to false
-    enum: ['employee', 'manager']
+    enum: ['employee', 'manager', 'admin']
   },
   department: { 
     type: String, 
