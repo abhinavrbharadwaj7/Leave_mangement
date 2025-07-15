@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Layout, Menu, Avatar, Card, Row, Col, Table, Typography, Button, Badge } from 'antd';
+import { Layout, Menu, Avatar, Card, Row, Col, Table, Typography, Button, Badge, Modal } from 'antd';
 import { UserOutlined, DashboardOutlined, ApartmentOutlined, TeamOutlined, KeyOutlined, LogoutOutlined, BellOutlined, PlusOutlined, ProfileOutlined } from '@ant-design/icons';
 import 'antd/dist/reset.css';
 import './AdminDashboard.css';
 import axios from 'axios';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import dayjs from 'dayjs';
 
 const { Header, Sider, Content } = Layout;
 const { Title } = Typography;
@@ -38,10 +39,10 @@ const columns = [
     width: 50,
   },
   {
-    title: 'Employee Name',
-    dataIndex: 'employeeName',
-    key: 'employeeName',
-    render: (text, record) => `${text} (${record.employeeId})`,
+    title: 'Employee Email',
+    dataIndex: 'employeeEmail',
+    key: 'employeeEmail',
+    render: (text) => text,
   },
   {
     title: 'Leave Type',
@@ -50,21 +51,22 @@ const columns = [
   },
   {
     title: 'Posting Date',
-    dataIndex: 'postingDate',
-    key: 'postingDate',
+    dataIndex: 'createdAt',
+    key: 'createdAt',
+    render: (date) => date ? dayjs(date).format('YYYY-MM-DD HH:mm:ss') : '-',
   },
   {
     title: 'Status',
     dataIndex: 'status',
     key: 'status',
     render: (status) => (
-      <Badge status={status === 'Approved' ? 'success' : 'processing'} text={status} />
+      <Badge status={status === 'approved' ? 'success' : status === 'rejected' ? 'error' : 'processing'} text={status.charAt(0).toUpperCase() + status.slice(1)} />
     ),
   },
   {
     title: 'Action',
     key: 'action',
-    render: () => <Button type="primary" size="small">View Details</Button>,
+    render: () => <Button type="primary" size="small" disabled>View Details</Button>,
   },
 ];
 
@@ -147,6 +149,12 @@ const userColumns = [
 const AdminDashboard = () => {
   const [users, setUsers] = useState([]);
   const [selectedSection, setSelectedSection] = useState('dashboard');
+  const [leaveRequests, setLeaveRequests] = useState([]);
+  const [latestApplications, setLatestApplications] = useState([]);
+  const navigate = useNavigate();
+  // Add sign out confirmation state
+  const [signOutConfirm, setSignOutConfirm] = useState(false);
+  const [isSignOutModalVisible, setIsSignOutModalVisible] = useState(false);
   useEffect(() => {
     axios.get('http://localhost:3001/api/all-users')
       .then(res => {
@@ -154,8 +162,75 @@ const AdminDashboard = () => {
       });
   }, []);
 
+  useEffect(() => {
+    if (selectedSection === 'dashboard') {
+      axios.get('http://localhost:3001/api/latest-leave-applications')
+        .then(res => {
+          if (res.data.success) setLatestApplications(res.data.leaveRequests);
+        });
+    }
+  }, [selectedSection]);
+
+  useEffect(() => {
+    if (selectedSection === 'leave-management') {
+      axios.get('http://localhost:3001/api/all-leave-requests')
+        .then(res => {
+          if (res.data.success) setLeaveRequests(res.data.leaveRequests);
+        });
+    }
+  }, [selectedSection]);
+
+  const handleApprove = (id) => {
+    axios.post(`http://localhost:3001/api/leave-request/${id}/approve`).then(() => {
+      setLeaveRequests(prev => prev.map(lr => lr._id === id ? { ...lr, status: 'Approved' } : lr));
+    });
+  };
+
+  const handleReject = (id) => {
+    axios.post(`http://localhost:3001/api/leave-request/${id}/reject`).then(() => {
+      setLeaveRequests(prev => prev.map(lr => lr._id === id ? { ...lr, status: 'Rejected' } : lr));
+    });
+  };
+
+  const leaveRequestColumns = [
+    { title: 'Employee Email', dataIndex: 'employeeEmail', key: 'employeeEmail' },
+    { title: 'Department', dataIndex: 'department', key: 'department' },
+    { title: 'Leave Type', dataIndex: 'leaveType', key: 'leaveType' },
+    { title: 'From', dataIndex: 'startDate', key: 'startDate', render: (date) => date ? dayjs(date).format('YYYY-MM-DD HH:mm') : '-' },
+    { title: 'To', dataIndex: 'endDate', key: 'endDate', render: (date) => date ? dayjs(date).format('YYYY-MM-DD HH:mm') : '-' },
+    { title: 'Status', dataIndex: 'status', key: 'status', render: (status) => <Badge status={status === 'approved' ? 'success' : status === 'rejected' ? 'error' : 'processing'} text={status} /> },
+    {
+      title: 'Action',
+      key: 'action',
+      render: (text, record) => (
+        <>
+          <Button
+            type="primary"
+            size="small"
+            onClick={() => handleApprove(record._id)}
+            disabled={record.status === 'approved'}
+            style={{
+              minWidth: 80,
+              backgroundColor: '#1890ff',
+              color: '#fff',
+              opacity: record.status === 'approved' ? 0.5 : 1,
+              borderColor: '#1890ff',
+              cursor: record.status === 'approved' ? 'not-allowed' : 'pointer'
+            }}
+          >
+            Approve
+          </Button>
+          <Button danger size="small" onClick={() => handleReject(record._id)} disabled={record.status === 'rejected'} style={{ marginLeft: 8 }}>Reject</Button>
+        </>
+      ),
+    },
+  ];
+
   const handleMenuClick = (e) => {
     setSelectedSection(e.key);
+    if (e.key === 'sign-out') {
+      setIsSignOutModalVisible(true);
+    }
   };
 
   const location = useLocation();
@@ -200,7 +275,7 @@ const AdminDashboard = () => {
               </Row>
               <Card bordered={false} style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
                 <Title level={4} style={{ color: '#1a223f', marginBottom: 20 }}>Latest Leave Applications</Title>
-                <Table columns={columns} dataSource={latestApplications} pagination={false} />
+                <Table columns={columns} dataSource={latestApplications} pagination={false} rowKey="_id" />
               </Card>
             </>
           )}
@@ -241,8 +316,7 @@ const AdminDashboard = () => {
           {selectedSection === 'leave-management' && (
             <Card bordered={false} style={{ borderRadius: 12, marginBottom: 32 }}>
               <Title level={4}>Leave Management</Title>
-              {/* Leave Management Table Placeholder */}
-              <p>Table: All leave requests, filter, approve/reject, etc.</p>
+              <Table columns={leaveRequestColumns} dataSource={leaveRequests} rowKey="_id" />
             </Card>
           )}
           {selectedSection === 'change-password' && (
@@ -252,12 +326,18 @@ const AdminDashboard = () => {
               <p>Old Password, New Password, Confirm Password, [Change Button]</p>
             </Card>
           )}
-          {selectedSection === 'sign-out' && (
-            <Card bordered={false} style={{ borderRadius: 12, marginBottom: 32, maxWidth: 400, textAlign: 'center' }}>
-              <Title level={4}>Sign Out</Title>
-              <p>You have been signed out.</p>
-            </Card>
-          )}
+          {/* Remove inline sign-out card, use Modal instead */}
+          <Modal
+            title="Sign Out"
+            open={isSignOutModalVisible}
+            onCancel={() => setIsSignOutModalVisible(false)}
+            footer={null}
+            centered
+          >
+            <p>Do you want to sign out?</p>
+            <Button type="primary" onClick={() => { setIsSignOutModalVisible(false); setTimeout(() => navigate('/'), 500); }}>Yes</Button>
+            <Button style={{ marginLeft: 12 }} onClick={() => setIsSignOutModalVisible(false)}>No</Button>
+          </Modal>
         </Content>
       </Layout>
     </Layout>

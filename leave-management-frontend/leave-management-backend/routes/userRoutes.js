@@ -155,15 +155,27 @@ router.post('/update-user-details', async (req, res) => {
 // Add all leave requests route
 router.get('/all-leave-requests', async (req, res) => {
   try {
-    const leaveRequests = await LeaveRequest.find({})
-      .sort({ startDate: 1 });
-    console.log('Fetched all leave requests:', leaveRequests.length);
+    // Get all leave requests
+    const leaveRequests = await LeaveRequest.find({}).sort({ startDate: 1 });
+    // Get all users (for mapping email to department)
+    const users = await User.find({}).select('email department');
+    // Debug log
+    console.log('Users:', users);
+    console.log('LeaveRequests:', leaveRequests);
+    // Map user info to leave requests
+    const leaveRequestsWithUser = leaveRequests.map(lr => {
+      const user = users.find(u => u.email === lr.email);
+      return {
+        ...lr.toObject(),
+        employeeEmail: lr.email || '',
+        department: user && user.department ? user.department : '',
+      };
+    });
     res.json({
       success: true,
-      leaveRequests
+      leaveRequests: leaveRequestsWithUser
     });
   } catch (error) {
-    console.error('Error fetching all leave requests:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch leave requests'
@@ -375,6 +387,33 @@ router.get('/all-users', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch users'
+    });
+  }
+});
+
+// Get latest leave applications (limit 5)
+router.get('/latest-leave-applications', async (req, res) => {
+  try {
+    const leaveRequests = await LeaveRequest.find({})
+      .sort({ createdAt: -1 })
+      .limit(5);
+    const users = await User.find({}).select('email department');
+    const leaveRequestsWithUser = leaveRequests.map(lr => {
+      const user = users.find(u => u.email === lr.email);
+      return {
+        ...lr.toObject(),
+        employeeEmail: lr.email || '',
+        department: user && user.department ? user.department : '',
+      };
+    });
+    res.json({
+      success: true,
+      leaveRequests: leaveRequestsWithUser
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch latest leave applications'
     });
   }
 });

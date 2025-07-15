@@ -17,9 +17,11 @@ app.use(express.json());
 
 // Import routes
 const userRoutes = require('./routes/userRoutes');
+const leaveRoutes = require('./routes/leaveRoutes');
 
 // Use routes
 app.use('/api', userRoutes);
+app.use('/api', leaveRoutes);
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI)
