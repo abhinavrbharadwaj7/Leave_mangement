@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Layout, Menu, Avatar, Card, Row, Col, Table, Typography, Button, Badge, Modal } from 'antd';
+import { Layout, Menu, Avatar, Card, Row, Col, Table, Typography, Button, Badge, Modal, Form, Input, message } from 'antd';
 import { UserOutlined, DashboardOutlined, ApartmentOutlined, TeamOutlined, KeyOutlined, LogoutOutlined, BellOutlined, PlusOutlined, ProfileOutlined } from '@ant-design/icons';
 import 'antd/dist/reset.css';
 import './AdminDashboard.css';
@@ -146,6 +146,12 @@ const userColumns = [
   },
 ];
 
+const leaveTypesInitial = [
+  { key: 'casual', name: 'Casual Leave', description: 'For personal matters or emergencies.' },
+  { key: 'sick', name: 'Sick Leave', description: 'For illness or medical needs.' },
+  { key: 'earned', name: 'Earned Leave', description: 'For planned vacations or earned time off.' },
+];
+
 const AdminDashboard = () => {
   const [users, setUsers] = useState([]);
   const [selectedSection, setSelectedSection] = useState('dashboard');
@@ -155,6 +161,18 @@ const AdminDashboard = () => {
   // Add sign out confirmation state
   const [signOutConfirm, setSignOutConfirm] = useState(false);
   const [isSignOutModalVisible, setIsSignOutModalVisible] = useState(false);
+  // NEW: State for leave details modal
+  const [selectedLeaveRequest, setSelectedLeaveRequest] = useState(null);
+  const [isDetailsModalVisible, setIsDetailsModalVisible] = useState(false);
+  const [leaveTypes, setLeaveTypes] = useState(leaveTypesInitial);
+  // Add this for the Add Leave Type form
+  const [form] = Form.useForm();
+  // Edit modal state
+  const [editModal, setEditModal] = useState({ visible: false, record: null });
+  const [editForm] = Form.useForm();
+  // Add Department state
+  const [departments, setDepartments] = useState([]);
+  const [deptForm] = Form.useForm();
   useEffect(() => {
     axios.get('http://localhost:3001/api/all-users')
       .then(res => {
@@ -203,25 +221,16 @@ const AdminDashboard = () => {
       title: 'Action',
       key: 'action',
       render: (text, record) => (
-        <>
-          <Button
-            type="primary"
-            size="small"
-            onClick={() => handleApprove(record._id)}
-            disabled={record.status === 'approved'}
-            style={{
-              minWidth: 80,
-              backgroundColor: '#1890ff',
-              color: '#fff',
-              opacity: record.status === 'approved' ? 0.5 : 1,
-              borderColor: '#1890ff',
-              cursor: record.status === 'approved' ? 'not-allowed' : 'pointer'
-            }}
-          >
-            Approve
-          </Button>
-          <Button danger size="small" onClick={() => handleReject(record._id)} disabled={record.status === 'rejected'} style={{ marginLeft: 8 }}>Reject</Button>
-        </>
+        <Button
+          type="primary"
+          size="small"
+          onClick={() => {
+            setSelectedLeaveRequest(record);
+            setIsDetailsModalVisible(true);
+          }}
+        >
+          View Details
+        </Button>
       ),
     },
   ];
@@ -280,31 +289,172 @@ const AdminDashboard = () => {
             </>
           )}
           {selectedSection === 'add-department' && (
-            <Card bordered={false} style={{ borderRadius: 12, marginBottom: 32 }}>
+            <Card bordered={false} style={{ borderRadius: 12, marginBottom: 32, background: '#f9fbff', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
               <Title level={4}>Add Department</Title>
-              {/* Add Department Form Placeholder */}
-              <p>Department Name, Short Name, Code, [ADD Button]</p>
+              <Form
+                form={deptForm}
+                layout="vertical"
+                onFinish={({ name, shortName, code }) => {
+                  if (!name || !shortName || !code) {
+                    message.error('Please fill all fields');
+                    return;
+                  }
+                  // Check for duplicate
+                  if (departments.some(d => d.name.toLowerCase() === name.toLowerCase())) {
+                    message.error('Department already exists');
+                    return;
+                  }
+                  setDepartments(prev => [
+                    ...prev,
+                    { key: code.toLowerCase(), name, shortName, code }
+                  ]);
+                  message.success('Department added');
+                  deptForm.resetFields();
+                }}
+                style={{ maxWidth: 400 }}
+                name="add-department-form"
+              >
+                <Form.Item name="name" label="Department Name" rules={[{ required: true, message: 'Please enter department name' }]}> 
+                  <Input placeholder="Enter department name" />
+                </Form.Item>
+                <Form.Item name="shortName" label="Short Name" rules={[{ required: true, message: 'Please enter short name' }]}> 
+                  <Input placeholder="Enter short name" />
+                </Form.Item>
+                <Form.Item name="code" label="Code" rules={[{ required: true, message: 'Please enter code' }]}> 
+                  <Input placeholder="Enter code" />
+                </Form.Item>
+                <Form.Item style={{ marginTop: 24 }}>
+                  <Button type="primary" htmlType="submit" block style={{ background: '#1890ff', color: '#fff', border: 'none' }}>ADD</Button>
+                </Form.Item>
+              </Form>
             </Card>
           )}
           {selectedSection === 'manage-department' && (
             <Card bordered={false} style={{ borderRadius: 12, marginBottom: 32 }}>
               <Title level={4}>Manage Department</Title>
-              {/* Manage Department Table Placeholder */}
-              <p>Table: Sr No, Department Name, Short Name, Code, Creation Date, Action (Edit/Delete)</p>
+              {/* Department Table: Department Name, Emails */}
+              <Table
+                columns={[
+                  { title: 'Department', dataIndex: 'department', key: 'department' },
+                  { title: 'Emails', dataIndex: 'emails', key: 'emails', render: emails => emails.map(email => <div key={email}>{email}</div>) }
+                ]}
+                dataSource={(() => {
+                  // Get unique departments
+                  const deptMap = {};
+                  users.forEach(u => {
+                    if (u.department) {
+                      if (!deptMap[u.department]) deptMap[u.department] = [];
+                      deptMap[u.department].push(u.email);
+                    }
+                  });
+                  return Object.entries(deptMap).map(([department, emails], idx) => ({
+                    key: idx,
+                    department,
+                    emails
+                  }));
+                })()}
+                pagination={false}
+              />
             </Card>
           )}
           {selectedSection === 'add-leave-type' && (
-            <Card bordered={false} style={{ borderRadius: 12, marginBottom: 32 }}>
+            <Card bordered={false} style={{ borderRadius: 12, marginBottom: 32, background: '#f9fbff', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
               <Title level={4}>Add Leave Type</Title>
-              {/* Add Leave Type Form Placeholder */}
-              <p>Leave Type Name, Description, [ADD Button]</p>
+              <Form
+                form={form}
+                layout="vertical"
+                onFinish={({ name, description }) => {
+                  if (!name || !description) {
+                    message.error('Please enter both name and description');
+                    return;
+                  }
+                  // Check for duplicate
+                  if (leaveTypes.some(lt => lt.name.toLowerCase() === name.toLowerCase())) {
+                    message.error('Leave type already exists');
+                    return;
+                  }
+                  setLeaveTypes(prev => [
+                    ...prev,
+                    { key: name.toLowerCase().replace(/\s+/g, '-'), name, description }
+                  ]);
+                  message.success('Leave type added');
+                  form.resetFields();
+                }}
+                style={{ maxWidth: 400 }}
+                name="add-leave-type-form"
+              >
+                <Form.Item name="name" label="Leave Type Name" rules={[{ required: true, message: 'Please enter leave type name' }]}> 
+                  <Input placeholder="Enter leave type name" />
+                </Form.Item>
+                <Form.Item name="description" label="Description" rules={[{ required: true, message: 'Please enter description' }]}> 
+                  <Input.TextArea placeholder="Enter description" rows={3} />
+                </Form.Item>
+                <Form.Item style={{ marginTop: 24 }}>
+                  <Button type="primary" htmlType="submit" block style={{ background: '#1890ff', color: '#fff', border: 'none' }}>ADD</Button>
+                </Form.Item>
+              </Form>
             </Card>
           )}
           {selectedSection === 'manage-leave-type' && (
             <Card bordered={false} style={{ borderRadius: 12, marginBottom: 32 }}>
               <Title level={4}>Manage Leave Type</Title>
-              {/* Manage Leave Type Table Placeholder */}
-              <p>Table: Leave Type Name, Description, Action (Edit/Delete)</p>
+              <Table
+                columns={[
+                  { title: 'Leave Type Name', dataIndex: 'name', key: 'name' },
+                  { title: 'Description', dataIndex: 'description', key: 'description' },
+                  {
+                    title: 'Action',
+                    key: 'action',
+                    render: (_, record) => (
+                      <>
+                        <Button size="small" style={{ marginRight: 8 }} onClick={() => {
+                          setEditModal({ visible: true, record });
+                          editForm.setFieldsValue({ name: record.name, description: record.description });
+                        }}>Edit</Button>
+                        <Button size="small" danger onClick={() => {
+                          Modal.confirm({
+                            title: 'Delete Leave Type',
+                            content: `Are you sure you want to delete "${record.name}"?`,
+                            okText: 'Delete',
+                            okType: 'danger',
+                            cancelText: 'Cancel',
+                            onOk: () => setLeaveTypes(prev => prev.filter(lt => lt.key !== record.key))
+                          });
+                        }}>Delete</Button>
+                      </>
+                    )
+                  }
+                ]}
+                dataSource={leaveTypes}
+                rowKey="key"
+                pagination={false}
+              />
+              {/* Edit Modal */}
+              <Modal
+                title="Edit Leave Type"
+                open={editModal.visible}
+                onCancel={() => setEditModal({ visible: false, record: null })}
+                onOk={() => {
+                  editForm.validateFields().then(values => {
+                    setLeaveTypes(prev => prev.map(lt =>
+                      lt.key === editModal.record.key ? { ...lt, name: values.name, description: values.description } : lt
+                    ));
+                    setEditModal({ visible: false, record: null });
+                    message.success('Leave type updated');
+                  });
+                }}
+                okText="Save"
+                cancelText="Cancel"
+              >
+                <Form form={editForm} layout="vertical">
+                  <Form.Item name="name" label="Leave Type Name" rules={[{ required: true, message: 'Please enter leave type name' }]}> 
+                    <Input />
+                  </Form.Item>
+                  <Form.Item name="description" label="Description" rules={[{ required: true, message: 'Please enter description' }]}> 
+                    <Input.TextArea rows={3} />
+                  </Form.Item>
+                </Form>
+              </Modal>
             </Card>
           )}
           {selectedSection === 'employees' && (
@@ -337,6 +487,48 @@ const AdminDashboard = () => {
             <p>Do you want to sign out?</p>
             <Button type="primary" onClick={() => { setIsSignOutModalVisible(false); setTimeout(() => navigate('/'), 500); }}>Yes</Button>
             <Button style={{ marginLeft: 12 }} onClick={() => setIsSignOutModalVisible(false)}>No</Button>
+          </Modal>
+          {/* NEW: Leave Details Modal */}
+          <Modal
+            title="Leave Request Details"
+            open={isDetailsModalVisible}
+            onCancel={() => setIsDetailsModalVisible(false)}
+            footer={null}
+            centered
+          >
+            {selectedLeaveRequest && (
+              <div>
+                <p><b>Employee Email:</b> {selectedLeaveRequest.employeeEmail}</p>
+                <p><b>Department:</b> {selectedLeaveRequest.department}</p>
+                <p><b>Leave Type:</b> {selectedLeaveRequest.leaveType}</p>
+                <p><b>From:</b> {selectedLeaveRequest.startDate ? dayjs(selectedLeaveRequest.startDate).format('YYYY-MM-DD HH:mm') : '-'}</p>
+                <p><b>To:</b> {selectedLeaveRequest.endDate ? dayjs(selectedLeaveRequest.endDate).format('YYYY-MM-DD HH:mm') : '-'}</p>
+                <p><b>Status:</b> {selectedLeaveRequest.status}</p>
+                <div style={{ marginTop: 24 }}>
+                  <Button
+                    type="primary"
+                    onClick={() => {
+                      handleApprove(selectedLeaveRequest._id);
+                      setIsDetailsModalVisible(false);
+                    }}
+                    disabled={selectedLeaveRequest.status === 'approved'}
+                  >
+                    Approve
+                  </Button>
+                  <Button
+                    danger
+                    style={{ marginLeft: 12 }}
+                    onClick={() => {
+                      handleReject(selectedLeaveRequest._id);
+                      setIsDetailsModalVisible(false);
+                    }}
+                    disabled={selectedLeaveRequest.status === 'rejected'}
+                  >
+                    Reject
+                  </Button>
+                </div>
+              </div>
+            )}
           </Modal>
         </Content>
       </Layout>
