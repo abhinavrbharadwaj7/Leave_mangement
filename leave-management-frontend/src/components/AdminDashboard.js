@@ -30,122 +30,6 @@ const latestApplications = [
   },
 ];
 
-const columns = [
-  {
-    title: '#',
-    dataIndex: 'key',
-    key: 'key',
-    render: (text, record, index) => index + 1,
-    width: 50,
-  },
-  {
-    title: 'Employee Email',
-    dataIndex: 'employeeEmail',
-    key: 'employeeEmail',
-    render: (text) => text,
-  },
-  {
-    title: 'Leave Type',
-    dataIndex: 'leaveType',
-    key: 'leaveType',
-  },
-  {
-    title: 'Posting Date',
-    dataIndex: 'createdAt',
-    key: 'createdAt',
-    render: (date) => date ? dayjs(date).format('YYYY-MM-DD HH:mm:ss') : '-',
-  },
-  {
-    title: 'Status',
-    dataIndex: 'status',
-    key: 'status',
-    render: (status) => (
-      <Badge status={status === 'approved' ? 'success' : status === 'rejected' ? 'error' : 'processing'} text={status.charAt(0).toUpperCase() + status.slice(1)} />
-    ),
-  },
-  {
-    title: 'Action',
-    key: 'action',
-    render: () => <Button type="primary" size="small" disabled>View Details</Button>,
-  },
-];
-
-const menuItems = [
-  {
-    key: 'dashboard',
-    icon: <DashboardOutlined />,
-    label: 'Dashboard',
-  },
-  {
-    key: 'department',
-    icon: <ApartmentOutlined />,
-    label: 'Department',
-    children: [
-      { key: 'add-department', icon: <PlusOutlined />, label: 'Add Department' },
-      { key: 'manage-department', icon: <ProfileOutlined />, label: 'Manage Department' },
-    ],
-  },
-  {
-    key: 'leave-type',
-    icon: <ProfileOutlined />,
-    label: 'Leave Type',
-    children: [
-      { key: 'add-leave-type', icon: <PlusOutlined />, label: 'Add Leave Type' },
-      { key: 'manage-leave-type', icon: <ProfileOutlined />, label: 'Manage Leave Type' },
-    ],
-  },
-  {
-    key: 'employees',
-    icon: <TeamOutlined />,
-    label: 'Employees',
-  },
-  {
-    key: 'leave-management',
-    icon: <ProfileOutlined />,
-    label: 'Leave Management',
-  },
-  {
-    key: 'change-password',
-    icon: <KeyOutlined />,
-    label: 'Change Password',
-  },
-  {
-    key: 'sign-out',
-    icon: <LogoutOutlined />,
-    label: 'Sign Out',
-  },
-];
-
-const sectionTitles = {
-  'dashboard': 'Dashboard',
-  'add-department': 'Add Department',
-  'manage-department': 'Manage Department',
-  'add-leave-type': 'Add Leave Type',
-  'manage-leave-type': 'Manage Leave Type',
-  'employees': 'Employees',
-  'leave-management': 'Leave Management',
-  'change-password': 'Change Password',
-};
-
-const userColumns = [
-  {
-    title: 'Email',
-    dataIndex: 'email',
-    key: 'email',
-  },
-  {
-    title: 'Role',
-    dataIndex: 'role',
-    key: 'role',
-    render: (role) => role.charAt(0).toUpperCase() + role.slice(1)
-  },
-  {
-    title: 'Department',
-    dataIndex: 'department',
-    key: 'department',
-  },
-];
-
 const leaveTypesInitial = [
   { key: 'casual', name: 'Casual Leave', description: 'For personal matters or emergencies.' },
   { key: 'sick', name: 'Sick Leave', description: 'For illness or medical needs.' },
@@ -173,6 +57,135 @@ const AdminDashboard = () => {
   // Add Department state
   const [departments, setDepartments] = useState([]);
   const [deptForm] = Form.useForm();
+
+  // Move columns definition here so it has access to the above state setters
+  const columns = [
+    {
+      title: '#',
+      dataIndex: 'key',
+      key: 'key',
+      render: (text, record, index) => index + 1,
+      width: 50,
+    },
+    {
+      title: 'Employee Email',
+      dataIndex: 'employeeEmail',
+      key: 'employeeEmail',
+      render: (text) => text,
+    },
+    {
+      title: 'Leave Type',
+      dataIndex: 'leaveType',
+      key: 'leaveType',
+    },
+    {
+      title: 'Posting Date',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      render: (date) => date ? dayjs(date).format('YYYY-MM-DD HH:mm:ss') : '-',
+    },
+    {
+      title: 'Status',
+      dataIndex: 'status',
+      key: 'status',
+      render: (status) => (
+        <Badge status={status === 'approved' ? 'success' : status === 'rejected' ? 'error' : 'processing'} text={status.charAt(0).toUpperCase() + status.slice(1)} />
+      ),
+    },
+    {
+      title: 'Action',
+      key: 'action',
+      render: (text, record) => (
+        <Button
+          type="primary"
+          size="small"
+          onClick={() => {
+            setSelectedLeaveRequest(record);
+            setIsDetailsModalVisible(true);
+          }}
+        >
+          View Details
+        </Button>
+      ),
+    },
+  ];
+
+  const menuItems = [
+    {
+      key: 'dashboard',
+      icon: <DashboardOutlined />,
+      label: 'Dashboard',
+    },
+    {
+      key: 'department',
+      icon: <ApartmentOutlined />,
+      label: 'Department',
+      children: [
+        { key: 'add-department', icon: <PlusOutlined />, label: 'Add Department' },
+        { key: 'manage-department', icon: <ProfileOutlined />, label: 'Manage Department' },
+      ],
+    },
+    {
+      key: 'leave-type',
+      icon: <ProfileOutlined />,
+      label: 'Leave Type',
+      children: [
+        { key: 'add-leave-type', icon: <PlusOutlined />, label: 'Add Leave Type' },
+        { key: 'manage-leave-type', icon: <ProfileOutlined />, label: 'Manage Leave Type' },
+      ],
+    },
+    {
+      key: 'employees',
+      icon: <TeamOutlined />,
+      label: 'Employees',
+    },
+    {
+      key: 'leave-management',
+      icon: <ProfileOutlined />,
+      label: 'Leave Management',
+    },
+    {
+      key: 'change-password',
+      icon: <KeyOutlined />,
+      label: 'Change Password',
+    },
+    {
+      key: 'sign-out',
+      icon: <LogoutOutlined />,
+      label: 'Sign Out',
+    },
+  ];
+
+  const sectionTitles = {
+    'dashboard': 'Dashboard',
+    'add-department': 'Add Department',
+    'manage-department': 'Manage Department',
+    'add-leave-type': 'Add Leave Type',
+    'manage-leave-type': 'Manage Leave Type',
+    'employees': 'Employees',
+    'leave-management': 'Leave Management',
+    'change-password': 'Change Password',
+  };
+
+  const userColumns = [
+    {
+      title: 'Email',
+      dataIndex: 'email',
+      key: 'email',
+    },
+    {
+      title: 'Role',
+      dataIndex: 'role',
+      key: 'role',
+      render: (role) => role.charAt(0).toUpperCase() + role.slice(1)
+    },
+    {
+      title: 'Department',
+      dataIndex: 'department',
+      key: 'department',
+    },
+  ];
+
   useEffect(() => {
     axios.get('http://localhost:3001/api/all-users')
       .then(res => {
@@ -507,10 +520,7 @@ const AdminDashboard = () => {
                 <div style={{ marginTop: 24 }}>
                   <Button
                     type="primary"
-                    onClick={() => {
-                      handleApprove(selectedLeaveRequest._id);
-                      setIsDetailsModalVisible(false);
-                    }}
+                    onClick={() => handleApprove(selectedLeaveRequest._id)}
                     disabled={selectedLeaveRequest.status === 'approved'}
                   >
                     Approve
@@ -518,17 +528,86 @@ const AdminDashboard = () => {
                   <Button
                     danger
                     style={{ marginLeft: 12 }}
-                    onClick={() => {
-                      handleReject(selectedLeaveRequest._id);
-                      setIsDetailsModalVisible(false);
-                    }}
+                    onClick={() => handleReject(selectedLeaveRequest._id)}
                     disabled={selectedLeaveRequest.status === 'rejected'}
                   >
                     Reject
                   </Button>
+                  <Button
+                    style={{ marginLeft: 12 }}
+                    onClick={() => {
+                      setEditModal({ visible: true, record: selectedLeaveRequest });
+                      setIsDetailsModalVisible(false);
+                      editForm.setFieldsValue({
+                        employeeEmail: selectedLeaveRequest.employeeEmail,
+                        department: selectedLeaveRequest.department,
+                        leaveType: selectedLeaveRequest.leaveType,
+                        startDate: selectedLeaveRequest.startDate ? dayjs(selectedLeaveRequest.startDate) : null,
+                        endDate: selectedLeaveRequest.endDate ? dayjs(selectedLeaveRequest.endDate) : null,
+                        status: selectedLeaveRequest.status,
+                      });
+                    }}
+                  >
+                    Edit
+                  </Button>
                 </div>
               </div>
             )}
+          </Modal>
+          {/* Edit Leave Request Modal for Admin */}
+          <Modal
+            title="Edit Leave Request"
+            open={editModal.visible}
+            onCancel={() => setEditModal({ visible: false, record: null })}
+            onOk={() => {
+              editForm.validateFields().then(values => {
+                // Prepare payload
+                const payload = {
+                  ...values,
+                  startDate: values.startDate ? values.startDate.toISOString() : null,
+                  endDate: values.endDate ? values.endDate.toISOString() : null,
+                };
+                axios.put(`http://localhost:3001/api/leave-request/${editModal.record._id}/admin-edit`, payload)
+                  .then(res => {
+                    if (res.data.success) {
+                      setLeaveRequests(prev => prev.map(lr =>
+                        lr._id === editModal.record._id ? { ...lr, ...payload } : lr
+                      ));
+                      message.success('Leave request updated');
+                    } else {
+                      message.error('Failed to update leave request');
+                    }
+                    setEditModal({ visible: false, record: null });
+                  })
+                  .catch(() => {
+                    message.error('Failed to update leave request');
+                    setEditModal({ visible: false, record: null });
+                  });
+              });
+            }}
+            okText="Save"
+            cancelText="Cancel"
+          >
+            <Form form={editForm} layout="vertical">
+              <Form.Item name="employeeEmail" label="Employee Email" rules={[{ required: true, message: 'Please enter employee email' }]}> 
+                <Input />
+              </Form.Item>
+              <Form.Item name="department" label="Department" rules={[{ required: true, message: 'Please enter department' }]}> 
+                <Input />
+              </Form.Item>
+              <Form.Item name="leaveType" label="Leave Type" rules={[{ required: true, message: 'Please enter leave type' }]}> 
+                <Input />
+              </Form.Item>
+              <Form.Item name="startDate" label="From" rules={[{ required: true, message: 'Please select start date' }]}> 
+                <Input type="datetime-local" />
+              </Form.Item>
+              <Form.Item name="endDate" label="To" rules={[{ required: true, message: 'Please select end date' }]}> 
+                <Input type="datetime-local" />
+              </Form.Item>
+              <Form.Item name="status" label="Status" rules={[{ required: true, message: 'Please enter status' }]}> 
+                <Input />
+              </Form.Item>
+            </Form>
           </Modal>
         </Content>
       </Layout>
