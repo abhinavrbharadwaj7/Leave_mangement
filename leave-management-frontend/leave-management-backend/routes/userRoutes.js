@@ -325,35 +325,37 @@ router.get('/manager-dashboard/:managerEmail', async (req, res) => {
       });
     }
 
-    // Get all employees who report to this manager
-    const teamMembers = await User.find({ 
-      role: 'employee',
-      manager: managerEmail
-    }).select('email role department');
+    // Only if the user is a manager, show all employees and all leave requests
+    if (manager.role === 'manager') {
+      const teamMembers = await User.find({ 
+        role: 'employee'
+      }).select('email role department');
 
-    // Get leave requests for these employees
-    const leaveRequests = await LeaveRequest.find({
-      email: { $in: teamMembers.map(member => member.email) }
-    }).sort({ createdAt: -1 });
+      const leaveRequests = await LeaveRequest.find({}).sort({ createdAt: -1 });
 
-    res.json({
-      success: true,
-      data: {
-        manager,
-        teamMembers,
-        leaveRequests,
-        stats: {
-          totalTeamMembers: teamMembers.length,
-          pendingRequests: leaveRequests.filter(req => req.status === 'pending').length,
-          onLeave: leaveRequests.filter(req => 
-            req.status === 'approved' &&
-            new Date(req.startDate) <= new Date() &&
-            new Date(req.endDate) >= new Date()
-          ).length
+      return res.json({
+        success: true,
+        data: {
+          manager,
+          teamMembers,
+          leaveRequests,
+          stats: {
+            totalTeamMembers: teamMembers.length,
+            pendingRequests: leaveRequests.filter(req => req.status === 'pending').length,
+            onLeave: leaveRequests.filter(req => 
+              req.status === 'approved' &&
+              new Date(req.startDate) <= new Date() &&
+              new Date(req.endDate) >= new Date()
+            ).length
+          }
         }
-      }
-    });
-
+      });
+    } else {
+      return res.status(403).json({
+        success: false,
+        message: 'Unauthorized: Not a manager'
+      });
+    }
   } catch (error) {
     console.error('Error fetching manager dashboard data:', error);
     res.status(500).json({
