@@ -3,11 +3,7 @@ import { Table, Button, Tag, message, Spin, Modal, Input, Tooltip, Calendar, Bad
 import axios from 'axios';
 import './ManagerDashboard.css';
 
-const BACKEND_URL =
-  process.env.REACT_APP_BACKEND_URL ||
-  (window.location.hostname === "localhost"
-    ? "http://localhost:3001"
-    : "https://leave-mangement.onrender.com");
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
 const formatDepartment = (dept) => {
   return dept.charAt(0).toUpperCase() + dept.slice(1);

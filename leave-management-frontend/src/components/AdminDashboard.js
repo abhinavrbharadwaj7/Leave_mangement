@@ -36,6 +36,8 @@ const leaveTypesInitial = [
   { key: 'earned', name: 'Earned Leave', description: 'For planned vacations or earned time off.' },
 ];
 
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+
 const AdminDashboard = () => {
   const [users, setUsers] = useState([]);
   const [selectedSection, setSelectedSection] = useState('dashboard');
@@ -187,7 +189,7 @@ const AdminDashboard = () => {
   ];
 
   useEffect(() => {
-    axios.get('http://localhost:3001/api/all-users')
+    axios.get(`${BACKEND_URL}/api/all-users`)
       .then(res => {
         if (res.data.success) setUsers(res.data.users);
       });
@@ -195,7 +197,7 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     if (selectedSection === 'dashboard') {
-      axios.get('http://localhost:3001/api/latest-leave-applications')
+      axios.get(`${BACKEND_URL}/api/latest-leave-applications`)
         .then(res => {
           if (res.data.success) setLatestApplications(res.data.leaveRequests);
         });
@@ -204,7 +206,7 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     if (selectedSection === 'leave-management') {
-      axios.get('http://localhost:3001/api/all-leave-requests')
+      axios.get(`${BACKEND_URL}/api/all-leave-requests`)
         .then(res => {
           if (res.data.success) setLeaveRequests(res.data.leaveRequests);
         });
@@ -212,13 +214,13 @@ const AdminDashboard = () => {
   }, [selectedSection]);
 
   const handleApprove = (id) => {
-    axios.post(`http://localhost:3001/api/leave-request/${id}/approve`).then(() => {
+    axios.post(`${BACKEND_URL}/api/leave-request/${id}/approve`).then(() => {
       setLeaveRequests(prev => prev.map(lr => lr._id === id ? { ...lr, status: 'Approved' } : lr));
     });
   };
 
   const handleReject = (id) => {
-    axios.post(`http://localhost:3001/api/leave-request/${id}/reject`).then(() => {
+    axios.post(`${BACKEND_URL}/api/leave-request/${id}/reject`).then(() => {
       setLeaveRequests(prev => prev.map(lr => lr._id === id ? { ...lr, status: 'Rejected' } : lr));
     });
   };
@@ -567,7 +569,7 @@ const AdminDashboard = () => {
                   startDate: values.startDate ? values.startDate.toISOString() : null,
                   endDate: values.endDate ? values.endDate.toISOString() : null,
                 };
-                axios.put(`http://localhost:3001/api/leave-request/${editModal.record._id}/admin-edit`, payload)
+                axios.put(`${BACKEND_URL}/api/leave-request/${editModal.record._id}/admin-edit`, payload)
                   .then(res => {
                     if (res.data.success) {
                       setLeaveRequests(prev => prev.map(lr =>

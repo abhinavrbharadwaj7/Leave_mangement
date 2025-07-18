@@ -15,11 +15,7 @@ const { Header, Sider, Content } = Layout;
 const { Option } = Select;
 const { RangePicker } = DatePicker;
 
-const BACKEND_URL =
-  process.env.REACT_APP_BACKEND_URL ||
-  (window.location.hostname === "localhost"
-    ? "http://localhost:3001"
-    : "https://leave-mangement.onrender.com");
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
 const EmployeeDashboard = () => {
   const navigate = useNavigate();

@@ -7,11 +7,8 @@ import './Login.css';
 import logo from '../assets/unnamed.jpg';
 
 // Use window.location.hostname to determine environment
-const BACKEND_URL =
-  process.env.REACT_APP_BACKEND_URL ||
-  (window.location.hostname === "localhost"
-    ? "http://localhost:3001"
-    : "https://leave-mangement.onrender.com");
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+console.log('BACKEND_URL:', BACKEND_URL); // Debug: Check if env variable is loaded
 
 const Login = () => {
   const [form] = Form.useForm();

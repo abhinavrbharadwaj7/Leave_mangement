@@ -8,7 +8,7 @@ const app = express();
 // Middleware
 app.use(cors({
   origin: [
-    'https://leave-management-blond.vercel.app', // <-- include protocol
+    'https://leave-mangement-blond.vercel.app', // correct Vercel frontend domain
     'http://localhost:3000' // for local dev
   ],
   credentials: true

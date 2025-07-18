@@ -13,6 +13,7 @@ router.post('/send-otp', async (req, res) => {
     // Find the user by email first
     const user = await User.findOne({ email });
     if (!user) {
+      console.log('User not found for OTP:', email);
       // If user does not exist, return an error
       return res.status(404).json({ success: false, message: 'User not registered. Please contact admin.' });
     }
@@ -41,9 +42,9 @@ router.post('/send-otp', async (req, res) => {
       code: otp,
       expiresAt: new Date(Date.now() + 10 * 60 * 1000)
     };
-    
+    console.log('Saving OTP to user:', user.email, user.otp);
     await user.save();
-    console.log('User saved with OTP:', user);
+    console.log('User saved with OTP:', user.email, user.otp);
 
     res.json({ 
       success: true, 
@@ -64,14 +65,20 @@ router.post('/verify-otp', async (req, res) => {
 
     const user = await User.findOne({ email });
     if (!user || !user.otp) {
-      console.log('User or OTP not found');
+      console.log('User or OTP not found for verification:', email);
       return res.status(400).json({ success: false, message: 'Invalid OTP' });
     }
 
     console.log('Stored OTP:', user.otp.code);
-    console.log('OTP Expiry:', user.otp.expiresAt);
+    console.log('OTP Expiry:', user.otp.expiresAt, 'Current Time:', new Date());
+    console.log('Comparing OTPs:', user.otp.code, 'vs', otp);
+    console.log('Is OTP expired?', user.otp.expiresAt <= new Date());
 
     if (user.otp.code === otp && user.otp.expiresAt > new Date()) {
+      // Clear OTP after successful verification
+      user.otp = undefined;
+      await user.save();
+      console.log('OTP verified successfully for:', email);
       res.json({
         success: true,
         role: user.role || 'Not Assigned',
@@ -79,6 +86,7 @@ router.post('/verify-otp', async (req, res) => {
         manager: user.manager || 'Not Assigned'
       });
     } else {
+      console.log('OTP verification failed for:', email, 'Reason:', user.otp.code !== otp ? 'OTP mismatch' : 'OTP expired');
       res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
     }
   } catch (error) {
