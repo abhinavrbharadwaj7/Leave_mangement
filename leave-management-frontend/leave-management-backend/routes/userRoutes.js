@@ -14,15 +14,23 @@ router.post('/send-otp', async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) {
       console.log('User not found for OTP:', email);
-      // If user does not exist, return an error
       return res.status(404).json({ success: false, message: 'User not registered. Please contact admin.' });
     }
 
     // Generate a 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    console.log('Generated OTP:', otp); // For testing purposes
+    console.log('Generated OTP:', otp);
 
-    // Send email with OTP
+    // Save OTP to the existing user document FIRST
+    user.otp = {
+      code: otp,
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000)
+    };
+    console.log('Saving OTP to user:', user.email, user.otp);
+    await user.save();
+    console.log('User saved with OTP:', user.email, user.otp);
+
+    // THEN send email with OTP
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: email,
@@ -37,19 +45,10 @@ router.post('/send-otp', async (req, res) => {
     await transporter.sendMail(mailOptions);
     console.log('OTP email sent successfully');
 
-    // Save OTP to the existing user document
-    user.otp = {
-      code: otp,
-      expiresAt: new Date(Date.now() + 10 * 60 * 1000)
-    };
-    console.log('Saving OTP to user:', user.email, user.otp);
-    await user.save();
-    console.log('User saved with OTP:', user.email, user.otp);
-
     res.json({ 
       success: true, 
-      message: 'OTP sent successfully',
-      otp: otp // Remove this in production, only for testing
+      message: 'OTP sent successfully'
+      // Do NOT send the OTP in the response in production!
     });
   } catch (error) {
     console.error('Error in send-otp:', error);
