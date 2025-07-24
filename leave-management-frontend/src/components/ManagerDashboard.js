@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Table, Button, Tag, message, Spin, Modal, Input, Tooltip, Calendar, Badge } from 'antd';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import './ManagerDashboard.css';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -19,6 +20,7 @@ const ManagerDashboard = () => {
   const [managerData, setManagerData] = useState(null);
   const [teamMembers, setTeamMembers] = useState([]);
   const [employeeDetails, setEmployeeDetails] = useState([]); // New state for employee details
+  const navigate = useNavigate();
 
   // Format employee data
   const formatEmployeeData = (employee) => {
@@ -238,6 +240,16 @@ const ManagerDashboard = () => {
                 <Tag color="blue">{formatDepartment(managerData.department)}</Tag>
               </div>
             )}
+          </div>
+          {/* Add button to top right */}
+          <div style={{ marginLeft: 'auto' }}>
+            <Button
+              type="primary"
+              style={{ background: '#1976d2', borderColor: '#1976d2' }}
+              onClick={() => navigate('/employee-dashboard')}
+            >
+              Go to MyDashboard
+            </Button>
           </div>
         </div>
       </div>

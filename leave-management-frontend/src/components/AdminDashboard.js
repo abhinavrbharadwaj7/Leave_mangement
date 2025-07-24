@@ -275,9 +275,18 @@ const AdminDashboard = () => {
           onClick={handleMenuClick}
         />
       </Sider>
-      <Layout style={{ marginLeft: 200, background: '#f4f6fa' }}>
-        <Header style={{ background: '#fff', padding: '0 32px 0 0', marginLeft: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center', minHeight: 64, boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
-          <Title level={3} style={{ margin: 0, color: '#1a223f' }}>ACQUIS | ADMIN</Title>
+      <Layout style={{ marginLeft: 0, background: '#f4f6fa' }}>
+        <Header style={{
+          background: '#fff',
+          padding: '0 32px 0 0', // Remove left padding
+          marginLeft: 0,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          minHeight: 64,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
+        }}>
+          <Title level={3} style={{ margin: 0, color: '#1a223f', marginLeft: '32px' }}>ACQUIS | ADMIN</Title>
           <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
             <BellOutlined style={{ fontSize: 22, color: '#1a223f' }} />
             <span style={{ fontSize: 16, color: '#1a223f' }}>Welcome to AQUIS LMS</span>
@@ -617,4 +626,4 @@ const AdminDashboard = () => {
   );
 };
 
-export default AdminDashboard; 
+export default AdminDashboard;
