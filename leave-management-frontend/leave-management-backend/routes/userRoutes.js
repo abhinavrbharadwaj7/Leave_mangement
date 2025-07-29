@@ -10,27 +10,11 @@ router.post('/send-otp', async (req, res) => {
     const { email } = req.body;
     console.log('Generating OTP for:', email);
 
-    // Find the user by email first
-    const user = await User.findOne({ email });
-    if (!user) {
-      console.log('User not found for OTP:', email);
-      return res.status(404).json({ success: false, message: 'User not registered. Please contact admin.' });
-    }
-
     // Generate a 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    console.log('Generated OTP:', otp);
+    console.log('Generated OTP:', otp); // For testing purposes
 
-    // Save OTP to the existing user document FIRST
-    user.otp = {
-      code: otp,
-      expiresAt: new Date(Date.now() + 10 * 60 * 1000)
-    };
-    console.log('Saving OTP to user:', user.email, user.otp);
-    await user.save();
-    console.log('User saved with OTP:', user.email, user.otp);
-
-    // THEN send email with OTP
+    // Send email with OTP
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: email,
@@ -45,10 +29,30 @@ router.post('/send-otp', async (req, res) => {
     await transporter.sendMail(mailOptions);
     console.log('OTP email sent successfully');
 
+    // Save or update user with OTP
+    let user = await User.findOne({ email });
+    if (!user) {
+      user = new User({
+        email,
+        otp: {
+          code: otp,
+          expiresAt: new Date(Date.now() + 10 * 60 * 1000) // 10 minutes expiry
+        }
+      });
+    } else {
+      user.otp = {
+        code: otp,
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000)
+      };
+    }
+
+    await user.save();
+    console.log('User saved with OTP:', user);
+
     res.json({ 
       success: true, 
-      message: 'OTP sent successfully'
-      // Do NOT send the OTP in the response in production!
+      message: 'OTP sent successfully',
+      otp: otp // Remove this in production, only for testing
     });
   } catch (error) {
     console.error('Error in send-otp:', error);
@@ -64,7 +68,7 @@ router.post('/verify-otp', async (req, res) => {
 
     const user = await User.findOne({ email });
     if (!user || !user.otp) {
-      console.log('User or OTP not found for verification:', email);
+      console.log('User or OTP not found');
       return res.status(400).json({ success: false, message: 'Invalid OTP' });
     }
 
@@ -73,20 +77,16 @@ router.post('/verify-otp', async (req, res) => {
     console.log('Comparing OTPs:', user.otp.code, 'vs', otp);
     console.log('Is OTP expired?', user.otp.expiresAt <= new Date());
 
-    if (user.otp.code === otp && user.otp.expiresAt > new Date()) {
-      // Clear OTP after successful verification
-      user.otp = undefined;
-      await user.save();
-      console.log('OTP verified successfully for:', email);
+    if (user.otp.code !== otp) {
+      return res.status(400).json({ success: false, message: 'Invalid OTP' });
+    } else if (user.otp.expiresAt <= new Date()) {
+      return res.status(400).json({ success: false, message: 'OTP expired' });
+    } else {
       res.json({
         success: true,
-        role: user.role || 'Not Assigned',
-        department: user.department || 'Not Assigned',
-        manager: user.manager || 'Not Assigned'
+        manager: 'John Doe', // Replace with actual manager data
+        department: 'Engineering'
       });
-    } else {
-      console.log('OTP verification failed for:', email, 'Reason:', user.otp.code !== otp ? 'OTP mismatch' : 'OTP expired');
-      res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
     }
   } catch (error) {
     console.error('Error in verify-otp:', error);
@@ -162,27 +162,15 @@ router.post('/update-user-details', async (req, res) => {
 // Add all leave requests route
 router.get('/all-leave-requests', async (req, res) => {
   try {
-    // Get all leave requests
-    const leaveRequests = await LeaveRequest.find({}).sort({ startDate: 1 });
-    // Get all users (for mapping email to department)
-    const users = await User.find({}).select('email department');
-    // Debug log
-    console.log('Users:', users);
-    console.log('LeaveRequests:', leaveRequests);
-    // Map user info to leave requests
-    const leaveRequestsWithUser = leaveRequests.map(lr => {
-      const user = users.find(u => u.email === lr.email);
-      return {
-        ...lr.toObject(),
-        employeeEmail: lr.email || '',
-        department: user && user.department ? user.department : '',
-      };
-    });
+    const leaveRequests = await LeaveRequest.find({})
+      .sort({ startDate: 1 });
+    console.log('Fetched all leave requests:', leaveRequests.length);
     res.json({
       success: true,
-      leaveRequests: leaveRequestsWithUser
+      leaveRequests
     });
   } catch (error) {
+    console.error('Error fetching all leave requests:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch leave requests'
@@ -325,104 +313,40 @@ router.get('/manager-dashboard/:managerEmail', async (req, res) => {
       });
     }
 
-    // Only if the user is a manager, show all employees and all leave requests
-    if (manager.role === 'manager') {
-      const teamMembers = await User.find({ 
-        role: 'employee'
-      }).select('email role department');
+    // Get employees under this manager
+    const teamMembers = await User.find({ 
+      department: manager.department,
+      role: 'employee'  // Only get employees
+    }).select('email role department');
 
-      const leaveRequests = await LeaveRequest.find({}).sort({ createdAt: -1 });
+    // Get leave requests for team members
+    const leaveRequests = await LeaveRequest.find({
+      email: { $in: teamMembers.map(member => member.email) }
+    }).sort({ createdAt: -1 });
 
-      return res.json({
-        success: true,
-        data: {
-          manager,
-          teamMembers,
-          leaveRequests,
-          stats: {
-            totalTeamMembers: teamMembers.length,
-            pendingRequests: leaveRequests.filter(req => req.status === 'pending').length,
-            onLeave: leaveRequests.filter(req => 
-              req.status === 'approved' &&
-              new Date(req.startDate) <= new Date() &&
-              new Date(req.endDate) >= new Date()
-            ).length
-          }
+    res.json({
+      success: true,
+      data: {
+        manager,
+        teamMembers,
+        leaveRequests,
+        stats: {
+          totalTeamMembers: teamMembers.length,
+          pendingRequests: leaveRequests.filter(req => req.status === 'pending').length,
+          onLeave: leaveRequests.filter(req => 
+            req.status === 'approved' &&
+            new Date(req.startDate) <= new Date() &&
+            new Date(req.endDate) >= new Date()
+          ).length
         }
-      });
-    } else {
-      return res.status(403).json({
-        success: false,
-        message: 'Unauthorized: Not a manager'
-      });
-    }
+      }
+    });
+
   } catch (error) {
     console.error('Error fetching manager dashboard data:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch manager dashboard data'
-    });
-  }
-});
-
-// Escalate leave request: approve on escalation
-router.post('/escalate-leave-request', async (req, res) => {
-  try {
-    const { id } = req.body;
-    const leaveRequest = await LeaveRequest.findById(id);
-    if (!leaveRequest) {
-      return res.status(404).json({ success: false, message: 'Leave request not found' });
-    }
-    leaveRequest.status = 'approved'; // Approve the leave
-    await leaveRequest.save();
-    res.json({ success: true, message: 'Request escalated and approved' });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Escalation failed' });
-  }
-});
-
-// Get all employees and managers
-router.get('/all-users', async (req, res) => {
-  try {
-    const users = await User.find({
-      role: { $in: ['employee', 'manager'] }
-    }).select('-otp -__v'); // Exclude sensitive fields
-    res.json({
-      success: true,
-      users
-    });
-  } catch (error) {
-    console.error('Error fetching users:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch users'
-    });
-  }
-});
-
-// Get latest leave applications (limit 5)
-router.get('/latest-leave-applications', async (req, res) => {
-  try {
-    const leaveRequests = await LeaveRequest.find({})
-      .sort({ createdAt: -1 })
-      .limit(5);
-    const users = await User.find({}).select('email department');
-    const leaveRequestsWithUser = leaveRequests.map(lr => {
-      const user = users.find(u => u.email === lr.email);
-      return {
-        ...lr.toObject(),
-        employeeEmail: lr.email || '',
-        department: user && user.department ? user.department : '',
-      };
-    });
-    res.json({
-      success: true,
-      leaveRequests: leaveRequestsWithUser
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch latest leave applications'
     });
   }
 });
