@@ -207,9 +207,15 @@ router.get('/leave-requests/:email', async (req, res) => {
 // Create leave request (employee)
 router.post('/leave-request', async (req, res) => {
   try {
-    const { email, leaveType, startDate, endDate, reason } = req.body;
-    const user = await User.findOne({ email });
-    const manager = user?.manager || ''; // get manager from user profile
+    const { email, leaveType, startDate, endDate, reason, status, manager } = req.body;
+    // If status is provided (manager applying as employee), use it, else default to 'pending'
+    const leaveStatus = status || 'pending';
+    // If manager is provided in body, use it, else get from user profile
+    let managerValue = manager;
+    if (typeof managerValue === 'undefined') {
+      const user = await User.findOne({ email });
+      managerValue = user?.manager || '';
+    }
 
     const leaveRequest = new LeaveRequest({
       email,
@@ -217,8 +223,8 @@ router.post('/leave-request', async (req, res) => {
       startDate: new Date(startDate),
       endDate: new Date(endDate),
       reason,
-      status: 'pending',
-      manager
+      status: leaveStatus,
+      manager: managerValue
     });
 
     await leaveRequest.save();
