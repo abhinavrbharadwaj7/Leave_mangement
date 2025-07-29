@@ -364,4 +364,24 @@ router.get('/manager-dashboard/:managerEmail', async (req, res) => {
   }
 });
 
+// Update or add the all-users route
+router.get('/all-users', async (req, res) => {
+  try {
+    const users = await User.find({})
+      .select('email role department')
+      .sort({ email: 1 });
+    
+    res.json({
+      success: true,
+      users: users
+    });
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch users'
+    });
+  }
+});
+
 module.exports = router;
