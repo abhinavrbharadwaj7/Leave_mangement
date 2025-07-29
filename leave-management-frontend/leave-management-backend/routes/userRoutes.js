@@ -77,16 +77,23 @@ router.post('/verify-otp', async (req, res) => {
     console.log('Comparing OTPs:', user.otp.code, 'vs', otp);
     console.log('Is OTP expired?', user.otp.expiresAt <= new Date());
 
-    if (user.otp.code !== otp) {
-      return res.status(400).json({ success: false, message: 'Invalid OTP' });
-    } else if (user.otp.expiresAt <= new Date()) {
-      return res.status(400).json({ success: false, message: 'OTP expired' });
+    if (user.otp.code === otp) {
+      if (user.otp.expiresAt > new Date()) {
+        // OTP is correct and not expired, allow login
+        // You may want to return user role/department here if needed
+        return res.json({
+          success: true,
+          role: user.role,
+          department: user.department,
+          manager: user.manager
+        });
+      } else {
+        // OTP is correct but expired
+        return res.status(400).json({ success: false, message: 'OTP expired' });
+      }
     } else {
-      res.json({
-        success: true,
-        manager: 'John Doe', // Replace with actual manager data
-        department: 'Engineering'
-      });
+      // OTP does not match
+      return res.status(400).json({ success: false, message: 'Invalid OTP' });
     }
   } catch (error) {
     console.error('Error in verify-otp:', error);
