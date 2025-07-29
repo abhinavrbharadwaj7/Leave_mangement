@@ -364,22 +364,28 @@ router.get('/manager-dashboard/:managerEmail', async (req, res) => {
   }
 });
 
-// Update or add the all-users route
-router.get('/all-users', async (req, res) => {
+// Add or update the route for fetching all users
+router.get('/users/all', async (req, res) => {
   try {
     const users = await User.find({})
-      .select('email role department')
+      .select('email role department') // Only select needed fields
       .sort({ email: 1 });
     
     res.json({
       success: true,
-      users: users
+      users: users.map(user => ({
+        email: user.email,
+        role: user.role || 'Not Assigned',
+        department: user.department || 'Not Assigned',
+        _id: user._id
+      }))
     });
   } catch (error) {
     console.error('Error fetching users:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch users'
+      message: 'Failed to fetch users',
+      error: error.message
     });
   }
 });
