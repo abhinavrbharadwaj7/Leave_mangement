@@ -20,6 +20,7 @@ const Login = () => {
   const [selectedRole, setSelectedRole] = useState(''); // Track selected role
   const [selectedDepartment, setSelectedDepartment] = useState(''); // Track selected department
   const [initializing, setInitializing] = useState(true);
+  const [otpError, setOtpError] = useState(''); // <-- Add this line
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -109,6 +110,7 @@ const Login = () => {
   const handleVerifyOTP = async (values) => {
     try {
       setLoading(true);
+      setOtpError(''); // Reset error before verifying
       const response = await axios.post(`${BACKEND_URL}/api/verify-otp`, {
         email: form.getFieldValue('email'),
         otp: values.otp
@@ -137,9 +139,16 @@ const Login = () => {
       }
     } catch (error) {
       console.error('Verification error:', error);
+      let errorMsg = error.response?.data?.message || 'Something went wrong. Please try again.';
+      if (errorMsg.toLowerCase().includes('expired')) {
+        errorMsg = 'OTP expired. Please request a new OTP.';
+      } else if (errorMsg.toLowerCase().includes('invalid')) {
+        errorMsg = 'Invalid OTP. Please check and try again.';
+      }
+      setOtpError(errorMsg); // <-- Set OTP error for UI
       notification.error({
         message: 'Verification Failed',
-        description: error.response?.data?.message || 'Something went wrong. Please try again.',
+        description: errorMsg,
         placement: 'top',
       });
     } finally {
@@ -248,6 +257,8 @@ const Login = () => {
             {isOtpSent && (
               <Form.Item
                 name="otp"
+                validateStatus={otpError ? "error" : ""}
+                help={otpError}
                 rules={[
                   { required: true, message: 'Please input your OTP!' },
                   { pattern: /^\d{6}$/, message: 'OTP must be 6 digits!' }

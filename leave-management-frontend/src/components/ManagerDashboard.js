@@ -1,10 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { Table, Button, Tag, message, Spin, Modal, Input, Tooltip, Calendar, Badge } from 'antd';
+import { LogoutOutlined } from '@ant-design/icons';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import './ManagerDashboard.css';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL =
+  process.env.REACT_APP_BACKEND_URL ||
+  (window.location.hostname === "localhost"
+    ? "http://localhost:3001"
+    : "https://leave-mangement.onrender.com");
 
 const formatDepartment = (dept) => {
   return dept.charAt(0).toUpperCase() + dept.slice(1);
@@ -19,19 +24,7 @@ const ManagerDashboard = () => {
   const [calendarData, setCalendarData] = useState([]);
   const [managerData, setManagerData] = useState(null);
   const [teamMembers, setTeamMembers] = useState([]);
-  const [employeeDetails, setEmployeeDetails] = useState([]); // New state for employee details
   const navigate = useNavigate();
-
-  // Format employee data
-  const formatEmployeeData = (employee) => {
-    return {
-      name: employee.email.split('@')[0],
-      email: employee.email,
-      role: employee.role,
-      department: employee.department,
-      status: employee.status
-    };
-  };
 
   const fetchDashboardData = async () => {
     try {
@@ -43,11 +36,6 @@ const ManagerDashboard = () => {
       if (response.data.success) {
         const { manager, teamMembers, leaveRequests, stats } = response.data.data;
         setManagerData(manager);
-
-        // Format and set employee details
-        const formattedEmployees = teamMembers.map(employee => formatEmployeeData(employee));
-        setEmployeeDetails(formattedEmployees);
-
         setTeamMembers(teamMembers);
         setLeaveRequests(leaveRequests);
         setCalendarData(leaveRequests);
@@ -159,9 +147,9 @@ const ManagerDashboard = () => {
               <Button
                 type="primary"
                 size="small"
-                className="custom-approve-btn"
                 onClick={() => handleAction(record._id, 'approved')}
                 style={{ marginRight: 8 }}
+                danger={isOverlapping(record)}
               >
                 Approve
               </Button>
@@ -177,32 +165,26 @@ const ManagerDashboard = () => {
     }
   ];
 
-  // Update team columns to use formatted employee data
+  // Update the team members table columns and data
   const teamColumns = [
     { 
       title: 'Name', 
+      dataIndex: 'email',
       key: 'name',
-      render: (_, record) => (
-        <span className="employee-name">
-          {record.email.split('@')[0]}
-        </span>
-      )
+      render: (email) => email.split('@')[0]
+    },
+    { title: 'Email', dataIndex: 'email', key: 'email' },
+    { 
+      title: 'Role', 
+      dataIndex: 'role', 
+      key: 'role',
+      render: (role) => <Tag color={role === 'employee' ? 'blue' : 'green'}>{role}</Tag>
     },
     { 
       title: 'Department', 
+      dataIndex: 'department', 
       key: 'department',
-      render: (_, record) => (
-        <Tag color="purple">{formatDepartment(record.department)}</Tag>
-      )
-    },
-    { 
-      title: 'Role', 
-      key: 'role',
-      render: (_, record) => (
-        <Tag color={record.role === 'employee' ? 'blue' : 'green'}>
-          {record.role}
-        </Tag>
-      )
+      render: (dept) => <Tag color="purple">{formatDepartment(dept)}</Tag>
     },
     { 
       title: 'Status',
@@ -216,15 +198,22 @@ const ManagerDashboard = () => {
         );
 
         return (
-          <div className="employee-status">
-            <Tag color={hasActiveLeave ? 'red' : 'green'}>
-              {hasActiveLeave ? 'On Leave' : 'Available'}
-            </Tag>
-          </div>
+          <Tag color={hasActiveLeave ? 'red' : 'green'}>
+            {hasActiveLeave ? 'On Leave' : 'Available'}
+          </Tag>
         );
       }
     }
   ];
+
+  const handleLogout = () => {
+    localStorage.removeItem('userData');
+    window.location.href = '/';
+  };
+
+  const handleMyDashboard = () => {
+    navigate('/employee-dashboard');
+  };
 
   return (
     <div className="manager-dashboard">
@@ -241,14 +230,25 @@ const ManagerDashboard = () => {
               </div>
             )}
           </div>
-          {/* Add button to top right */}
-          <div style={{ marginLeft: 'auto' }}>
+          <div style={{ display: 'flex', gap: 12 }}>
             <Button
-              type="primary"
-              style={{ background: '#1976d2', borderColor: '#1976d2' }}
-              onClick={() => navigate('/employee-dashboard')}
+              onClick={handleMyDashboard}
+              style={{
+                background: '#fff',
+                color: '#4c6bc5',
+                border: '1px solid #4c6bc5',
+                fontWeight: 600,
+                borderRadius: 8
+              }}
             >
-              Go to MyDashboard
+              My Dashboard
+            </Button>
+            <Button
+              icon={<LogoutOutlined />}
+              onClick={handleLogout}
+              style={{ background: '#ff4d4f', color: '#fff', border: 'none', marginLeft: 8 }}
+            >
+              Logout
             </Button>
           </div>
         </div>
@@ -316,10 +316,9 @@ const ManagerDashboard = () => {
         <h2>Team Members</h2>
         <Table
           columns={teamColumns}
-          dataSource={employeeDetails}
+          dataSource={teamMembers}
           rowKey="email"
           pagination={false}
-          loading={loading}
         />
       </div>
 

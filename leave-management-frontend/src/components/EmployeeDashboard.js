@@ -5,7 +5,8 @@ import {
   UserOutlined,
   HistoryOutlined,
   CalendarOutlined,
-  FileAddOutlined
+  FileAddOutlined,
+  LogoutOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import './EmployeeDashboard.css';
@@ -146,6 +147,11 @@ const EmployeeDashboard = () => {
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('userData');
+    navigate('/');
+  };
+
   if (initializing) {
     return (
       <div className="loading-container">
@@ -166,6 +172,22 @@ const EmployeeDashboard = () => {
           <Menu.Item key="dashboard" icon={<UserOutlined />}>Dashboard</Menu.Item>
           <Menu.Item key="history" icon={<HistoryOutlined />}>History</Menu.Item>
         </Menu>
+        <div style={{ width: '100%', padding: collapsed ? '0' : '16px', marginTop: 'auto' }}>
+          <Button
+            icon={<LogoutOutlined />}
+            onClick={handleLogout}
+            style={{
+              width: '100%',
+              background: '#ff4d4f',
+              color: '#fff',
+              border: 'none',
+              marginTop: 16,
+              borderRadius: 8
+            }}
+          >
+            {!collapsed && 'Logout'}
+          </Button>
+        </div>
       </Sider>
       <Layout>
         <Header className="dashboard-header">
