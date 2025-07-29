@@ -25,12 +25,12 @@ const leaveRequestSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'approved', 'rejected'],
+    enum: ['pending', 'approved', 'rejected', 'pending_admin'],
     default: 'pending'
   },
   manager: {
     type: String,
-    required: true // manager's email
+    required: false // Allow empty manager for admin-only approval
   },
   managerComment: {
     type: String,
