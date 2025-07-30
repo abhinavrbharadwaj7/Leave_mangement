@@ -11,6 +11,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import './EmployeeDashboard.css';
 import axios from 'axios';
+import dayjs from 'dayjs';
 
 const { Header, Sider, Content } = Layout;
 const { Option } = Select;
@@ -32,6 +33,7 @@ const EmployeeDashboard = () => {
   const [leaveHistory, setLeaveHistory] = useState([]);
   const [allLeaveRequests, setAllLeaveRequests] = useState([]);
   const [userData, setUserData] = useState(null);
+  const [isManagerView, setIsManagerView] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -41,13 +43,14 @@ const EmployeeDashboard = () => {
           navigate('/');
           return;
         }
-        
         const user = JSON.parse(userData);
-        if (user.role !== 'employee' && user.role !== 'manager') {
+        // If manager navigates to employee dashboard, allow but mark as manager view
+        if (user.role === 'manager') {
+          setIsManagerView(true);
+        } else if (user.role !== 'employee') {
           navigate('/');
           return;
         }
-        // Set user email from localStorage
         setUserEmail(user.email);
       } catch (error) {
         console.error('Auth check failed:', error);
@@ -119,27 +122,30 @@ const EmployeeDashboard = () => {
         return;
       }
 
-      console.log('Submitting leave request:', {
-        email: userData.email,
-        ...values,
-        dateRange: values.dateRange.map(date => date.format('YYYY-MM-DD'))
-      });
-
-      const response = await axios.post(`${BACKEND_URL}/api/leave-request`, {
+      // If manager is applying leave from employee dashboard, set status to 'pending_admin' and manager to empty
+      let leavePayload = {
         email: userData.email,
         leaveType: values.leaveType,
         startDate: values.dateRange[0].format('YYYY-MM-DD'),
         endDate: values.dateRange[1].format('YYYY-MM-DD'),
         reason: values.reason,
-        manager: userData.manager // <-- include manager
-      });
+      };
+
+      if (isManagerView) {
+        leavePayload.status = 'pending_admin';
+        leavePayload.manager = ''; // No manager approval, admin only
+      } else {
+        leavePayload.manager = userData.manager;
+      }
+
+      const response = await axios.post(`${BACKEND_URL}/api/leave-request`, leavePayload);
 
       if (response.data.success) {
         message.success('Leave request submitted successfully');
         setModalVisible(false);
         leaveForm.resetFields();
-        fetchLeaveHistory(); // Refresh the history
-        fetchAllLeaveRequests(); // Refresh all leave requests
+        fetchLeaveHistory();
+        fetchAllLeaveRequests();
       }
     } catch (error) {
       console.error('Leave request error:', error);
@@ -268,6 +274,23 @@ const EmployeeDashboard = () => {
                             <div className="leave-date">
                               {new Date(leave.startDate).toLocaleDateString()} - {new Date(leave.endDate).toLocaleDateString()}
                             </div>
+                            <div style={{ marginTop: 6 }}>
+                              <b>Status:</b>{' '}
+                              <span
+                                style={{
+                                  color:
+                                    leave.status === 'approved'
+                                      ? '#52c41a'
+                                      : leave.status === 'rejected'
+                                      ? '#ff4d4f'
+                                      : '#faad14',
+                                  fontWeight: 600,
+                                  textTransform: 'capitalize'
+                                }}
+                              >
+                                {leave.status}
+                              </span>
+                            </div>
                           </div>
                         ))
                     ) : (
@@ -322,7 +345,10 @@ const EmployeeDashboard = () => {
                 name="dateRange"
                 rules={[{ required: true, message: 'Please select date range' }]}
               >
-                <RangePicker style={{ width: '100%' }} />
+                <RangePicker
+                  style={{ width: '100%' }}
+                  disabledDate={current => current && current < dayjs().startOf('day')}
+                />
               </Form.Item>
 
               <Form.Item
@@ -336,6 +362,11 @@ const EmployeeDashboard = () => {
                 Submit Request
               </Button>
             </Form>
+            {isManagerView && (
+              <div style={{ marginTop: 16, color: '#faad14', fontWeight: 500 }}>
+                Note: As a manager, your leave request will be sent directly to the admin for approval.
+              </div>
+            )}
           </Modal>
         </Content>
       </Layout>

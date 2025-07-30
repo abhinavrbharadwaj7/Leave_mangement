@@ -24,6 +24,7 @@ const ManagerDashboard = () => {
   const [calendarData, setCalendarData] = useState([]);
   const [managerData, setManagerData] = useState(null);
   const [teamMembers, setTeamMembers] = useState([]);
+  const [editModal, setEditModal] = useState({ visible: false, record: null });
   const navigate = useNavigate();
 
   const fetchDashboardData = async () => {
@@ -85,6 +86,28 @@ const ManagerDashboard = () => {
     }
   };
 
+  // Edit leave request status (approve/reject)
+  const handleEditLeaveStatus = (record) => {
+    setEditModal({ visible: true, record });
+  };
+
+  const handleEditStatusSave = async () => {
+    if (!editModal.record) return;
+    const newStatus = editModal.record.status === 'approved' ? 'rejected' : 'approved';
+    try {
+      await axios.post(`${BACKEND_URL}/api/leave-request-action`, {
+        id: editModal.record._id,
+        status: newStatus,
+        comment: '', // Optionally allow comment
+      });
+      message.success(`Leave request status changed to ${newStatus}`);
+      setEditModal({ visible: false, record: null });
+      fetchDashboardData();
+    } catch {
+      message.error('Failed to update leave request status');
+    }
+  };
+
   // Calendar cell render for leave events
   const dateCellRender = (value) => {
     const dateStr = value.format('YYYY-MM-DD');
@@ -140,28 +163,40 @@ const ManagerDashboard = () => {
     {
       title: 'Action',
       key: 'action',
-      render: (_, record) =>
-        record.status === 'pending' ? (
-          <>
-            <Tooltip title={isOverlapping(record) ? "Overlaps with another approved leave" : ""}>
-              <Button
-                type="primary"
-                size="small"
-                onClick={() => handleAction(record._id, 'approved')}
-                style={{ marginRight: 8 }}
-                danger={isOverlapping(record)}
-              >
-                Approve
+      render: (_, record) => (
+        <>
+          {record.status === 'pending' && (
+            <>
+              <Tooltip title={isOverlapping(record) ? "Overlaps with another approved leave" : ""}>
+                <Button
+                  type="primary"
+                  size="small"
+                  onClick={() => handleAction(record._id, 'approved')}
+                  style={{ marginRight: 8 }}
+                  danger={isOverlapping(record)}
+                >
+                  Approve
+                </Button>
+              </Tooltip>
+              <Button danger size="small" onClick={() => handleAction(record._id, 'rejected')} style={{ marginRight: 8 }}>
+                Reject
               </Button>
-            </Tooltip>
-            <Button danger size="small" onClick={() => handleAction(record._id, 'rejected')} style={{ marginRight: 8 }}>
-              Reject
+              <Button size="small" onClick={() => handleEscalate(record._id)}>
+                Escalate
+              </Button>
+            </>
+          )}
+          {(record.status === 'approved' || record.status === 'rejected') && (
+            <Button
+              size="small"
+              style={{ marginLeft: 8 }}
+              onClick={() => handleEditLeaveStatus(record)}
+            >
+              Edit
             </Button>
-            <Button size="small" onClick={() => handleEscalate(record._id)}>
-              Escalate
-            </Button>
-          </>
-        ) : null
+          )}
+        </>
+      )
     }
   ];
 
@@ -335,6 +370,26 @@ const ManagerDashboard = () => {
           onChange={e => setComment(e.target.value)}
           placeholder="Add a comment (optional)"
         />
+      </Modal>
+
+      <Modal
+        title="Edit Leave Request Status"
+        open={editModal.visible}
+        onOk={handleEditStatusSave}
+        onCancel={() => setEditModal({ visible: false, record: null })}
+        okText={`Change to ${editModal.record?.status === 'approved' ? 'Rejected' : 'Approved'}`}
+        cancelText="Cancel"
+      >
+        {editModal.record && (
+          <div>
+            <p>
+              Current Status: <b style={{ textTransform: 'capitalize' }}>{editModal.record.status}</b>
+            </p>
+            <p>
+              Are you sure you want to change the status to <b>{editModal.record.status === 'approved' ? 'Rejected' : 'Approved'}</b>?
+            </p>
+          </div>
+        )}
       </Modal>
     </div>
   );

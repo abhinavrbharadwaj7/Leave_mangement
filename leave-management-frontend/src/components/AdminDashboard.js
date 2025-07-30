@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Layout, Menu, Avatar, Card, Row, Col, Table, Typography, Button, Badge, Modal, Form, Input, message } from 'antd';
+import { Layout, Menu, Avatar, Card, Row, Col, Table, Typography, Button, Badge, Modal, Form, Input, message, Select } from 'antd';
 import { UserOutlined, DashboardOutlined, ApartmentOutlined, TeamOutlined, KeyOutlined, LogoutOutlined, BellOutlined, PlusOutlined, ProfileOutlined } from '@ant-design/icons';
 import 'antd/dist/reset.css';
 import './AdminDashboard.css';
@@ -36,7 +36,7 @@ const leaveTypesInitial = [
   { key: 'earned', name: 'Earned Leave', description: 'For planned vacations or earned time off.' },
 ];
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
 
 const AdminDashboard = () => {
   const [users, setUsers] = useState([]);
@@ -71,9 +71,8 @@ const AdminDashboard = () => {
     },
     {
       title: 'Employee Email',
-      dataIndex: 'employeeEmail',
-      key: 'employeeEmail',
-      render: (text) => text,
+      dataIndex: 'email',  // Changed from employeeEmail to email
+      key: 'email',
     },
     {
       title: 'Leave Type',
@@ -91,7 +90,8 @@ const AdminDashboard = () => {
       dataIndex: 'status',
       key: 'status',
       render: (status) => (
-        <Badge status={status === 'approved' ? 'success' : status === 'rejected' ? 'error' : 'processing'} text={status.charAt(0).toUpperCase() + status.slice(1)} />
+        <Badge status={status === 'approved' ? 'success' : status === 'rejected' ? 'error' : 'processing'} 
+        text={status.charAt(0).toUpperCase() + status.slice(1)} />
       ),
     },
     {
@@ -169,7 +169,14 @@ const AdminDashboard = () => {
     'change-password': 'Change Password',
   };
 
+  // Update userColumns definition
   const userColumns = [
+    {
+      title: 'Employee Name',
+      dataIndex: 'email',
+      key: 'name',
+      render: email => email.split('@')[0].charAt(0).toUpperCase() + email.split('@')[0].slice(1)
+    },
     {
       title: 'Email',
       dataIndex: 'email',
@@ -179,27 +186,65 @@ const AdminDashboard = () => {
       title: 'Role',
       dataIndex: 'role',
       key: 'role',
-      render: (role) => role.charAt(0).toUpperCase() + role.slice(1)
+      render: role => role ? (role.charAt(0).toUpperCase() + role.slice(1)) : '-'
     },
     {
       title: 'Department',
       dataIndex: 'department',
       key: 'department',
-    },
+      render: dept => dept ? (dept.charAt(0).toUpperCase() + dept.slice(1)) : '-'
+    }
   ];
 
   useEffect(() => {
-    axios.get(`${BACKEND_URL}/api/all-users`)
-      .then(res => {
-        if (res.data.success) setUsers(res.data.users);
-      });
+    const fetchUsers = async () => {
+      try {
+        const token = localStorage.getItem('token'); // If you have auth token
+        const response = await axios.get(`${BACKEND_URL}/api/users/all`, {
+          headers: {
+            'Content-Type': 'application/json',
+            // Add auth header if needed
+            // 'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.data && Array.isArray(response.data)) {
+          setUsers(response.data);
+        } else if (response.data.users && Array.isArray(response.data.users)) {
+          setUsers(response.data.users);
+        } else {
+          console.warn('Invalid user data format:', response.data);
+          setUsers([]);
+        }
+      } catch (error) {
+        console.error('Error fetching users:', error.response || error);
+        message.error('Failed to load users. Please check your connection.');
+        setUsers([]);
+      }
+    };
+
+    fetchUsers();
   }, []);
 
   useEffect(() => {
     if (selectedSection === 'dashboard') {
-      axios.get(`${BACKEND_URL}/api/latest-leave-applications`)
+      axios.get(`${BACKEND_URL}/api/all-leave-requests`)
         .then(res => {
-          if (res.data.success) setLatestApplications(res.data.leaveRequests);
+          if (res.data.success && Array.isArray(res.data.leaveRequests)) {
+            const sorted = [...res.data.leaveRequests]
+              .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+              .slice(0, 5)
+              .map(request => ({
+                ...request,
+                key: request._id,
+                email: request.email  // Make sure email is included
+              }));
+            setLatestApplications(sorted);
+          }
+        })
+        .catch(err => {
+          console.error('Error fetching leave requests:', err);
+          message.error('Failed to load latest applications');
         });
     }
   }, [selectedSection]);
@@ -208,10 +253,22 @@ const AdminDashboard = () => {
     if (selectedSection === 'leave-management') {
       axios.get(`${BACKEND_URL}/api/all-leave-requests`)
         .then(res => {
-          if (res.data.success) setLeaveRequests(res.data.leaveRequests);
+          if (res.data.success) {
+            const requests = res.data.leaveRequests.map(request => ({
+              ...request,
+              key: request._id,
+              // Ensure email is set
+              email: request.email || request.employeeEmail
+            }));
+            setLeaveRequests(requests);
+          }
+        })
+        .catch(err => {
+          console.error('Error fetching leave requests:', err);
+          message.error('Failed to load leave requests');
         });
     }
-  }, [selectedSection]);
+  }, [selectedSection, users]);
 
   const handleApprove = (id) => {
     axios.post(`${BACKEND_URL}/api/leave-request/${id}/approve`).then(() => {
@@ -226,8 +283,20 @@ const AdminDashboard = () => {
   };
 
   const leaveRequestColumns = [
-    { title: 'Employee Email', dataIndex: 'employeeEmail', key: 'employeeEmail' },
-    { title: 'Department', dataIndex: 'department', key: 'department' },
+    { 
+      title: 'Employee Email', 
+      dataIndex: 'email',  // Changed from employeeEmail to email
+      key: 'email'
+    },
+    { 
+      title: 'Department', 
+      dataIndex: 'department',
+      key: 'department',
+      render: (_, record) => {
+        const user = users.find(u => u.email === record.email);
+        return user?.department || '-';
+      }
+    },
     { title: 'Leave Type', dataIndex: 'leaveType', key: 'leaveType' },
     { title: 'From', dataIndex: 'startDate', key: 'startDate', render: (date) => date ? dayjs(date).format('YYYY-MM-DD HH:mm') : '-' },
     { title: 'To', dataIndex: 'endDate', key: 'endDate', render: (date) => date ? dayjs(date).format('YYYY-MM-DD HH:mm') : '-' },
@@ -356,26 +425,45 @@ const AdminDashboard = () => {
           {selectedSection === 'manage-department' && (
             <Card bordered={false} style={{ borderRadius: 12, marginBottom: 32 }}>
               <Title level={4}>Manage Department</Title>
-              {/* Department Table: Department Name, Emails */}
               <Table
                 columns={[
-                  { title: 'Department', dataIndex: 'department', key: 'department' },
-                  { title: 'Emails', dataIndex: 'emails', key: 'emails', render: emails => emails.map(email => <div key={email}>{email}</div>) }
+                  { 
+                    title: 'Department',
+                    dataIndex: 'department',
+                    key: 'department',
+                    render: dept => dept.charAt(0).toUpperCase() + dept.slice(1)
+                  },
+                  { 
+                    title: 'Employees',
+                    dataIndex: 'employees',
+                    key: 'employees',
+                    render: employees => (
+                      <div>
+                        {employees.map(email => (
+                          <div key={email}>
+                            {email.split('@')[0].charAt(0).toUpperCase() + email.split('@')[0].slice(1)}
+                            <br />
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  }
                 ]}
                 dataSource={(() => {
-                  // Get unique departments
                   const deptMap = {};
                   users.forEach(u => {
                     if (u.department) {
-                      if (!deptMap[u.department]) deptMap[u.department] = [];
-                      deptMap[u.department].push(u.email);
+                      if (!deptMap[u.department]) {
+                        deptMap[u.department] = {
+                          key: u.department,
+                          department: u.department,
+                          employees: []
+                        };
+                      }
+                      deptMap[u.department].employees.push(u.email);
                     }
                   });
-                  return Object.entries(deptMap).map(([department, emails], idx) => ({
-                    key: idx,
-                    department,
-                    emails
-                  }));
+                  return Object.values(deptMap);
                 })()}
                 pagination={false}
               />
@@ -484,7 +572,17 @@ const AdminDashboard = () => {
           {selectedSection === 'employees' && (
             <Card bordered={false} style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', marginBottom: 32 }}>
               <Title level={4} style={{ color: '#1a223f', marginBottom: 20 }}>Employees & Managers</Title>
-              <Table columns={userColumns} dataSource={users.filter(u => u.role !== 'admin').map((u, i) => ({...u, key: i}))} pagination={false} />
+              <Table 
+                columns={userColumns}
+                dataSource={users
+                  .filter(u => u.role !== 'admin')
+                  .map(user => ({
+                    key: user._id || user.email,
+                    ...user
+                  }))}
+                locale={{ emptyText: "No employees or managers found" }}
+                pagination={false}
+              />
             </Card>
           )}
           {selectedSection === 'leave-management' && (
@@ -529,21 +627,6 @@ const AdminDashboard = () => {
                 <p><b>To:</b> {selectedLeaveRequest.endDate ? dayjs(selectedLeaveRequest.endDate).format('YYYY-MM-DD HH:mm') : '-'}</p>
                 <p><b>Status:</b> {selectedLeaveRequest.status}</p>
                 <div style={{ marginTop: 24 }}>
-                  <Button
-                    type="primary"
-                    onClick={() => handleApprove(selectedLeaveRequest._id)}
-                    disabled={selectedLeaveRequest.status === 'approved'}
-                  >
-                    Approve
-                  </Button>
-                  <Button
-                    danger
-                    style={{ marginLeft: 12 }}
-                    onClick={() => handleReject(selectedLeaveRequest._id)}
-                    disabled={selectedLeaveRequest.status === 'rejected'}
-                  >
-                    Reject
-                  </Button>
                   <Button
                     style={{ marginLeft: 12 }}
                     onClick={() => {
@@ -615,8 +698,11 @@ const AdminDashboard = () => {
               <Form.Item name="endDate" label="To" rules={[{ required: true, message: 'Please select end date' }]}> 
                 <Input type="datetime-local" />
               </Form.Item>
-              <Form.Item name="status" label="Status" rules={[{ required: true, message: 'Please enter status' }]}> 
-                <Input />
+              <Form.Item name="status" label="Status" rules={[{ required: true, message: 'Please select a status' }]}>
+                <Select>
+                  <Select.Option value="approved">Approve</Select.Option>
+                  <Select.Option value="rejected">Reject</Select.Option>
+                </Select>
               </Form.Item>
             </Form>
           </Modal>
