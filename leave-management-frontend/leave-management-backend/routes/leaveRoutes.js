@@ -35,10 +35,12 @@ router.post('/leave-request/:id/reject', async (req, res) => {
 // Update a leave request
 router.put('/leave-request/:id', async (req, res) => {
   try {
-    const { leaveType, startDate, endDate, reason } = req.body;
+    const { leaveType, startDate, endDate, reason, status } = req.body;
+    const updateFields = { leaveType, startDate, endDate, reason };
+    if (status) updateFields.status = status;
     const leaveRequest = await LeaveRequest.findByIdAndUpdate(
       req.params.id,
-      { leaveType, startDate, endDate, reason },
+      updateFields,
       { new: true, runValidators: true }
     );
     if (!leaveRequest) return res.status(404).json({ success: false, message: 'Leave request not found' });
