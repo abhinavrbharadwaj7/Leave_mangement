@@ -34,6 +34,7 @@ const mailOptions = {
         <meta http-equiv="X-UA-Compatible" content="ie=edge">
         <title>Acquis Compliance - Leave Management Portal Access</title>
         <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     </head>
     <body style="margin: 0; padding: 0; font-family: 'Poppins', sans-serif; background: linear-gradient(135deg, #00B4D8 0%, #0077B6 100%); min-height: 100vh;">
         <table width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #00B4D8 0%, #0077B6 100%); min-height: 100vh;">
@@ -47,7 +48,7 @@ const mailOptions = {
                                 <div style="background-color: rgba(255,255,255,0.15); width: 90px; height: 90px; border-radius: 50%; margin: 0 auto 25px; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px);">
                                     <img
                                         alt="Acquis Compliance"
-                                        src="C:/Users/abhinav/OneDrive/Desktop/leave mangement/leave-management-frontend/src/assets/unnamed.jpg"
+                                        src="https://www.acquiscompliance.com/static/brand-logo-20f74545f9b7c6443e60be675812a5cd.png"
                                         height="45px"
                                         style="filter: brightness(0) invert(1);"
                                     />
@@ -89,7 +90,7 @@ const mailOptions = {
                                         </div>
                                     </div>
                                     <div style="display: flex; align-items: center; justify-content: center; color: #E63946; font-size: 14px; font-weight: 600;">
-                                        <span style="margin-right: 8px;">:alarm_clock:</span>
+                                        <i class="fa-solid fa-clock" style="margin-right: 8px;"></i>
                                         Expires in 10 minutes
                                     </div>
                                 </div>
@@ -100,7 +101,7 @@ const mailOptions = {
                             <td style="padding: 0 40px 30px;">
                                 <div style="background-color: #FFF3CD; border: 1px solid #FFEAA7; border-radius: 8px; padding: 20px;">
                                     <div style="display: flex; align-items: flex-start;">
-                                        <div style="color: #F39C12; margin-right: 12px; font-size: 18px;">:closed_lock_with_key:</div>
+                                        <i class="fa-solid fa-lock" style="color: #F39C12; margin-right: 12px; font-size: 18px;"></i>
                                         <div style="flex: 1;">
                                             <h3 style="color: #856404; font-size: 16px; margin: 0 0 12px; font-weight: 600;">
                                                 Leave Portal Security Notice
@@ -112,24 +113,6 @@ const mailOptions = {
                                                 <li style="margin-bottom: 6px;">Contact IT support if you didn't request portal access</li>
                                             </ul>
                                         </div>
-                                    </div>
-                                </div>
-                            </td>
-                        </tr>
-                        <!-- Support Section -->
-                        <tr>
-                            <td style="padding: 0 40px 30px;">
-                                <div style="background-color: #F8F9FA; border-radius: 8px; padding: 20px; text-align: center;">
-                                    <p style="color: #434343; font-size: 14px; margin: 0 0 12px; font-weight: 500; letter-spacing: 0.3px;">
-                                        Need help with the Leave Management Portal?
-                                    </p>
-                                    <div style="margin: 16px 0;">
-                                        <a href="mailto:support@acquiscompliance.com" style="display: inline-block; background: linear-gradient(135deg, #00B4D8 0%, #0077B6 100%); color: white; text-decoration: none; font-weight: 600; font-size: 14px; padding: 12px 24px; border-radius: 6px; margin: 0 8px 8px 0;">
-                                            :e-mail: IT Support
-                                        </a>
-                                        <a href="#" style="display: inline-block; background: transparent; color: #0077B6; text-decoration: none; font-weight: 600; font-size: 14px; padding: 12px 24px; border: 2px solid #0077B6; border-radius: 6px; margin: 0 8px 8px 0;">
-                                            :house: Portal Help
-                                        </a>
                                     </div>
                                 </div>
                             </td>
@@ -162,9 +145,9 @@ const mailOptions = {
                                 <div style="margin: 20px 0;">
                                     <a href="#" style="display: inline-block; margin: 0 8px; color: #6C757D; text-decoration: none; font-size: 12px;">Leave Policy</a>
                                     <span style="color: #D1D5DB;">|</span>
-                                    <a href="#" style="display: inline-block; margin: 0 8px; color: #6C757D; text-decoration: none; font-size: 12px;">Portal Guide</a>
+                                    <a href="https://portal.acquiscompliance.com/help" style="display: inline-block; margin: 0 8px; color: #6C757D; text-decoration: none; font-size: 12px;">Portal Guide</a>
                                     <span style="color: #D1D5DB;">|</span>
-                                    <a href="#" style="display: inline-block; margin: 0 8px; color: #6C757D; text-decoration: none; font-size: 12px;">IT Support</a>
+                                    <a href="mailto:support@acquiscompliance.com" style="display: inline-block; margin: 0 8px; color: #6C757D; text-decoration: none; font-size: 12px;">IT Support</a>
                                 </div>
                                 <p style="color: #ADB5BD; font-size: 12px; margin: 16px 0 0;">
                                     © 2025 Acquis Compliance. All rights reserved.
@@ -179,6 +162,7 @@ const mailOptions = {
     </html>
   `
 };
+
 
     // Send email with professional template
     await transporter.sendMail(mailOptions);
