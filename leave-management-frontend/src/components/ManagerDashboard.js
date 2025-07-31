@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Table, Button, Tag, message, Spin, Modal, Input, Tooltip, Calendar, Badge } from 'antd';
+import { Table, Button, Tag, message, Spin, Modal, Input, Tooltip, Calendar, Badge, Select } from 'antd';
 import { LogoutOutlined } from '@ant-design/icons';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
@@ -25,6 +25,7 @@ const ManagerDashboard = () => {
   const [managerData, setManagerData] = useState(null);
   const [teamMembers, setTeamMembers] = useState([]);
   const [editModal, setEditModal] = useState({ visible: false, record: null });
+const [selectedStatus, setSelectedStatus] = useState('');
   const navigate = useNavigate();
 
   const fetchDashboardData = async () => {
@@ -89,19 +90,20 @@ const ManagerDashboard = () => {
   // Edit leave request status (approve/reject)
   const handleEditLeaveStatus = (record) => {
     setEditModal({ visible: true, record });
+    setSelectedStatus(record.status);
   };
 
   const handleEditStatusSave = async () => {
     if (!editModal.record) return;
-    const newStatus = editModal.record.status === 'approved' ? 'rejected' : 'approved';
     try {
       await axios.post(`${BACKEND_URL}/api/leave-request-action`, {
         id: editModal.record._id,
-        status: newStatus,
+        status: selectedStatus,
         comment: '', // Optionally allow comment
       });
-      message.success(`Leave request status changed to ${newStatus}`);
+      message.success(`Leave request status changed to ${selectedStatus}`);
       setEditModal({ visible: false, record: null });
+      setSelectedStatus('');
       fetchDashboardData();
     } catch {
       message.error('Failed to update leave request status');
@@ -253,41 +255,42 @@ const ManagerDashboard = () => {
   return (
     <div className="manager-dashboard">
       <div className="dashboard-header">
-        <div className="header-content">
-          <div className="header-info">
-            <h1>Manager Dashboard</h1>
-            {managerData && (
-              <div className="manager-details">
-                <span className="manager-name">
-                  {managerData.email.split('@')[0]}
-                </span>
-                <Tag color="blue">{formatDepartment(managerData.department)}</Tag>
-              </div>
-            )}
+  <div className="header-content" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+      <div className="header-info">
+        <h1>Manager Dashboard</h1>
+        {managerData && (
+          <div className="manager-details">
+            <span className="manager-name">
+              {managerData.email.split('@')[0]}
+            </span>
+            <Tag color="blue">{formatDepartment(managerData.department)}</Tag>
           </div>
-          <div style={{ display: 'flex', gap: 12 }}>
-            <Button
-              onClick={handleMyDashboard}
-              style={{
-                background: '#fff',
-                color: '#4c6bc5',
-                border: '1px solid #4c6bc5',
-                fontWeight: 600,
-                borderRadius: 8
-              }}
-            >
-              My Dashboard
-            </Button>
-            <Button
-              icon={<LogoutOutlined />}
-              onClick={handleLogout}
-              style={{ background: '#ff4d4f', color: '#fff', border: 'none', marginLeft: 8 }}
-            >
-              Logout
-            </Button>
-          </div>
-        </div>
+        )}
       </div>
+      <Button
+        onClick={handleMyDashboard}
+        style={{
+          background: '#fff',
+          color: '#4c6bc5',
+          border: '1px solid #4c6bc5',
+          fontWeight: 600,
+          borderRadius: 8,
+          marginLeft: 20
+        }}
+      >
+        My Dashboard
+      </Button>
+    </div>
+    <Button
+      icon={<LogoutOutlined />}
+      onClick={handleLogout}
+      style={{ background: '#ff4d4f', color: '#fff', border: 'none', marginLeft: 8 }}
+    >
+      Logout
+    </Button>
+  </div>
+</div>
 
       {/* Add Team Overview Section */}
       <div className="team-overview">
@@ -376,8 +379,8 @@ const ManagerDashboard = () => {
         title="Edit Leave Request Status"
         open={editModal.visible}
         onOk={handleEditStatusSave}
-        onCancel={() => setEditModal({ visible: false, record: null })}
-        okText={`Change to ${editModal.record?.status === 'approved' ? 'Rejected' : 'Approved'}`}
+        onCancel={() => { setEditModal({ visible: false, record: null }); setSelectedStatus(''); }}
+        okText="Apply Changes"
         cancelText="Cancel"
       >
         {editModal.record && (
@@ -386,7 +389,16 @@ const ManagerDashboard = () => {
               Current Status: <b style={{ textTransform: 'capitalize' }}>{editModal.record.status}</b>
             </p>
             <p>
-              Are you sure you want to change the status to <b>{editModal.record.status === 'approved' ? 'Rejected' : 'Approved'}</b>?
+              Change Status To:
+              <Select
+                style={{ width: 180, marginLeft: 10 }}
+                value={selectedStatus}
+                onChange={setSelectedStatus}
+              >
+                <Select.Option value="approved">Approved</Select.Option>
+                <Select.Option value="rejected">Rejected</Select.Option>
+                <Select.Option value="pending">Pending</Select.Option>
+              </Select>
             </p>
           </div>
         )}

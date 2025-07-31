@@ -34,6 +34,10 @@ const EmployeeDashboard = () => {
   const [allLeaveRequests, setAllLeaveRequests] = useState([]);
   const [userData, setUserData] = useState(null);
   const [isManagerView, setIsManagerView] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [selectedLeave, setSelectedLeave] = useState(null);
+  const [editForm] = Form.useForm();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -156,6 +160,57 @@ const EmployeeDashboard = () => {
   const handleLogout = () => {
     localStorage.removeItem('userData');
     navigate('/');
+  };
+
+  const handleEditLeave = (leave) => {
+    setSelectedLeave(leave);
+    setEditModalVisible(true);
+  };
+
+  const handleDeleteLeave = (leave) => {
+    setSelectedLeave(leave);
+    setDeleteModalVisible(true);
+  };
+
+  const handleEditSubmit = async (values) => {
+    try {
+      const leavePayload = {
+        id: selectedLeave.id,
+        leaveType: values.leaveType,
+        startDate: values.dateRange[0].format('YYYY-MM-DD'),
+        endDate: values.dateRange[1].format('YYYY-MM-DD'),
+        reason: values.reason,
+      };
+
+      const response = await axios.put(`${BACKEND_URL}/api/leave-request`, leavePayload);
+
+      if (response.data.success) {
+        message.success('Leave request updated successfully');
+        setEditModalVisible(false);
+        editForm.resetFields();
+        fetchLeaveHistory();
+        fetchAllLeaveRequests();
+      }
+    } catch (error) {
+      console.error('Leave request update error:', error);
+      message.error('Failed to update leave request. Please try again.');
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    try {
+      const response = await axios.delete(`${BACKEND_URL}/api/leave-request/${selectedLeave.id}`);
+
+      if (response.data.success) {
+        message.success('Leave request deleted successfully');
+        setDeleteModalVisible(false);
+        fetchLeaveHistory();
+        fetchAllLeaveRequests();
+      }
+    } catch (error) {
+      console.error('Leave request delete error:', error);
+      message.error('Failed to delete leave request. Please try again.');
+    }
   };
 
   if (initializing) {
@@ -291,6 +346,22 @@ const EmployeeDashboard = () => {
                                 {leave.status}
                               </span>
                             </div>
+                            <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+                              <Button 
+                                size="small" 
+                                type="primary" 
+                                onClick={() => handleEditLeave(leave)}
+                              >
+                                Edit
+                              </Button>
+                              <Button 
+                                size="small" 
+                                danger 
+                                onClick={() => handleDeleteLeave(leave)}
+                              >
+                                Delete
+                              </Button>
+                            </div>
                           </div>
                         ))
                     ) : (
@@ -319,6 +390,24 @@ const EmployeeDashboard = () => {
                       <p><b>From:</b> {new Date(leave.startDate).toLocaleDateString()}</p>
                       <p><b>To:</b> {new Date(leave.endDate).toLocaleDateString()}</p>
                       <p><b>Reason:</b> {leave.reason}</p>
+                      {leave.status === 'pending' && (
+                        <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+                          <Button 
+                            size="small" 
+                            type="primary" 
+                            onClick={() => handleEditLeave(leave)}
+                          >
+                            Edit
+                          </Button>
+                          <Button 
+                            size="small" 
+                            danger 
+                            onClick={() => handleDeleteLeave(leave)}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      )}
                     </Card>
                   ))
                 ) : (
@@ -367,6 +456,83 @@ const EmployeeDashboard = () => {
                 Note: As a manager, your leave request will be sent directly to the admin for approval.
               </div>
             )}
+          </Modal>
+
+          {/* Edit Leave Modal */}
+          <Modal 
+            title="Edit Leave Request" 
+            open={editModalVisible} 
+            onCancel={() => {
+              setEditModalVisible(false);
+              editForm.resetFields();
+            }} 
+            footer={null}
+          >
+            <Form 
+              form={editForm} 
+              onFinish={handleEditSubmit}
+              initialValues={{
+                leaveType: selectedLeave?.leaveType,
+                dateRange: selectedLeave ? [
+                  dayjs(selectedLeave.startDate),
+                  dayjs(selectedLeave.endDate)
+                ] : [],
+                reason: selectedLeave?.reason
+              }}
+            >
+              <Form.Item
+                name="leaveType"
+                rules={[{ required: true, message: 'Please select leave type' }]}
+              >
+                <Select placeholder="Select Leave Type">
+                  <Option value="casual">Casual Leave</Option>
+                  <Option value="sick">Sick Leave</Option>
+                  <Option value="earned">Earned Leave</Option>
+                </Select>
+              </Form.Item>
+
+              <Form.Item
+                name="dateRange"
+                rules={[{ required: true, message: 'Please select date range' }]}
+              >
+                <RangePicker
+                  style={{ width: '100%' }}
+                  disabledDate={current => current && current < dayjs().startOf('day')}
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="reason"
+                rules={[{ required: true, message: 'Please enter reason for leave' }]}
+              >
+                <Input.TextArea rows={3} placeholder="Enter reason for leave" />
+              </Form.Item>
+
+              <Button type="primary" htmlType="submit" block>
+                Update Request
+              </Button>
+            </Form>
+          </Modal>
+
+          {/* Delete Confirmation Modal */}
+          <Modal
+            title="Delete Leave Request"
+            open={deleteModalVisible}
+            onCancel={() => setDeleteModalVisible(false)}
+            onOk={handleDeleteConfirm}
+            okText="Delete"
+            okType="danger"
+            cancelText="Cancel"
+            centered
+          >
+            <p>Are you sure you want to delete this leave request?</p>
+            <div style={{ background: '#f5f5f5', padding: 12, borderRadius: 6, marginTop: 12 }}>
+              <p><b>Type:</b> {selectedLeave?.leaveType}</p>
+              <p><b>From:</b> {selectedLeave ? new Date(selectedLeave.startDate).toLocaleDateString() : ''}</p>
+              <p><b>To:</b> {selectedLeave ? new Date(selectedLeave.endDate).toLocaleDateString() : ''}</p>
+              <p><b>Reason:</b> {selectedLeave?.reason}</p>
+            </div>
+            <p style={{ color: '#ff4d4f', fontSize: '14px', marginTop: 12 }}>This action cannot be undone.</p>
           </Modal>
         </Content>
       </Layout>
