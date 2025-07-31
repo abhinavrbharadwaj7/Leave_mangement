@@ -82,10 +82,12 @@ const Login = () => {
       if (response.data.success) {
         setIsOtpSent(true);
         setEmail(emailValue);
+        setOtpTimer(300); // 5 minutes countdown
         notification.success({
-          message: 'OTP Sent',
-          description: 'Please check your email for the OTP',
+          message: '✅ OTP Sent Successfully!',
+          description: 'A professional verification email has been sent to your inbox. Please check your email (including spam folder) for the OTP code.',
           placement: 'top',
+          duration: 6,
         });
       }
     } catch (error) {

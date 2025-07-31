@@ -59,6 +59,13 @@ const AdminDashboard = () => {
   // Add Department state
   const [departments, setDepartments] = useState([]);
   const [deptForm] = Form.useForm();
+  const [deptModal, setDeptModal] = useState({ visible: false, mode: 'add', record: null });
+  const [deptDeleteModal, setDeptDeleteModal] = useState({ visible: false, record: null });
+  
+  // Employee management state
+  const [employeeModal, setEmployeeModal] = useState({ visible: false, mode: 'add', record: null });
+  const [employeeForm] = Form.useForm();
+  const [deleteConfirmModal, setDeleteConfirmModal] = useState({ visible: false, employee: null });
 
   // Move columns definition here so it has access to the above state setters
   const columns = [
@@ -270,17 +277,24 @@ const AdminDashboard = () => {
     }
   }, [selectedSection, users]);
 
-  const handleApprove = (id) => {
-    axios.post(`${BACKEND_URL}/api/leave-request/${id}/approve`).then(() => {
-      setLeaveRequests(prev => prev.map(lr => lr._id === id ? { ...lr, status: 'Approved' } : lr));
-    });
-  };
-
-  const handleReject = (id) => {
-    axios.post(`${BACKEND_URL}/api/leave-request/${id}/reject`).then(() => {
-      setLeaveRequests(prev => prev.map(lr => lr._id === id ? { ...lr, status: 'Rejected' } : lr));
-    });
-  };
+  // Fetch departments when manage-department section is selected
+  useEffect(() => {
+    if (selectedSection === 'manage-department') {
+      axios.get(`${BACKEND_URL}/api/departments`)
+        .then(res => {
+          if (res.data.success && Array.isArray(res.data.departments)) {
+            setDepartments(res.data.departments);
+          } else {
+            setDepartments([]);
+          }
+        })
+        .catch(err => {
+          console.error('Error fetching departments:', err);
+          setDepartments([]);
+          message.error('Failed to load departments');
+        });
+    }
+  }, [selectedSection]);
 
   const leaveRequestColumns = [
     { 
@@ -318,6 +332,94 @@ const AdminDashboard = () => {
       ),
     },
   ];
+
+  // Department CRUD handlers
+  const handleAddDepartment = async (values) => {
+    try {
+      const res = await axios.post(`${BACKEND_URL}/api/departments`, values);
+      if (res.data.success) {
+        setDepartments(prev => [...prev, res.data.department]);
+        setDeptModal({ visible: false, mode: 'add', record: null });
+        deptForm.resetFields();
+        message.success('Department added successfully!');
+      }
+    } catch (error) {
+      message.error(error.response?.data?.message || 'Failed to add department');
+    }
+  };
+
+  const handleEditDepartment = async (values) => {
+    try {
+      const id = deptModal.record._id;
+      const res = await axios.put(`${BACKEND_URL}/api/departments/${id}`, values);
+      if (res.data.success) {
+        setDepartments(prev => prev.map(d => d._id === id ? res.data.department : d));
+        setDeptModal({ visible: false, mode: 'add', record: null });
+        deptForm.resetFields();
+        message.success('Department updated successfully!');
+      }
+    } catch (error) {
+      message.error(error.response?.data?.message || 'Failed to update department');
+    }
+  };
+
+  const handleDeleteDepartment = async (record) => {
+    try {
+      const id = record._id;
+      const res = await axios.delete(`${BACKEND_URL}/api/departments/${id}`);
+      if (res.data.success) {
+        setDepartments(prev => prev.filter(d => d._id !== id));
+        setDeptDeleteModal({ visible: false, record: null });
+        message.success('Department deleted successfully!');
+      }
+    } catch (error) {
+      message.error(error.response?.data?.message || 'Failed to delete department');
+    }
+  };
+
+  // Employee management functions
+  const handleAddEmployee = async (values) => {
+    try {
+      const response = await axios.post(`${BACKEND_URL}/api/users/create`, values);
+      if (response.data.success) {
+        setUsers(prev => [...prev, response.data.user]);
+        setEmployeeModal({ visible: false, mode: 'add', record: null });
+        employeeForm.resetFields();
+        message.success('Employee added successfully!');
+      }
+    } catch (error) {
+      message.error(error.response?.data?.message || 'Failed to add employee');
+    }
+  };
+
+  const handleEditEmployee = async (values) => {
+    try {
+      const response = await axios.put(`${BACKEND_URL}/api/users/${employeeModal.record._id}`, values);
+      if (response.data.success) {
+        setUsers(prev => prev.map(user => 
+          user._id === employeeModal.record._id ? { ...user, ...values } : user
+        ));
+        setEmployeeModal({ visible: false, mode: 'edit', record: null });
+        employeeForm.resetFields();
+        message.success('Employee updated successfully!');
+      }
+    } catch (error) {
+      message.error(error.response?.data?.message || 'Failed to update employee');
+    }
+  };
+
+  const handleDeleteEmployee = async (employee) => {
+    try {
+      const response = await axios.delete(`${BACKEND_URL}/api/users/${employee._id}`);
+      if (response.data.success) {
+        setUsers(prev => prev.filter(user => user._id !== employee._id));
+        setDeleteConfirmModal({ visible: false, employee: null });
+        message.success('Employee deleted successfully!');
+      }
+    } catch (error) {
+      message.error(error.response?.data?.message || 'Failed to delete employee');
+    }
+  };
 
   const handleMenuClick = (e) => {
     setSelectedSection(e.key);
@@ -423,52 +525,91 @@ const AdminDashboard = () => {
             </Card>
           )}
           {selectedSection === 'manage-department' && (
-            <Card bordered={false} style={{ borderRadius: 12, marginBottom: 32 }}>
-              <Title level={4}>Manage Department</Title>
-              <Table
-                columns={[
-                  { 
-                    title: 'Department',
-                    dataIndex: 'department',
-                    key: 'department',
-                    render: dept => dept.charAt(0).toUpperCase() + dept.slice(1)
-                  },
-                  { 
-                    title: 'Employees',
-                    dataIndex: 'employees',
-                    key: 'employees',
-                    render: employees => (
-                      <div>
-                        {employees.map(email => (
-                          <div key={email}>
-                            {email.split('@')[0].charAt(0).toUpperCase() + email.split('@')[0].slice(1)}
-                            <br />
-                          </div>
-                        ))}
-                      </div>
-                    )
-                  }
-                ]}
-                dataSource={(() => {
-                  const deptMap = {};
-                  users.forEach(u => {
-                    if (u.department) {
-                      if (!deptMap[u.department]) {
-                        deptMap[u.department] = {
-                          key: u.department,
-                          department: u.department,
-                          employees: []
-                        };
-                      }
-                      deptMap[u.department].employees.push(u.email);
-                    }
-                  });
-                  return Object.values(deptMap);
-                })()}
-                pagination={false}
-              />
-            </Card>
-          )}
+  <Card bordered={false} style={{ borderRadius: 12, marginBottom: 32 }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+      <Title level={4} style={{ margin: 0 }}>Manage Department</Title>
+      <Button type="primary" icon={<PlusOutlined />} onClick={() => {
+        setDeptModal({ visible: true, mode: 'add', record: null });
+        deptForm.resetFields();
+      }}>
+        Add Department
+      </Button>
+    </div>
+    <Table
+      columns={[
+        {
+          title: 'Department Name',
+          dataIndex: 'name',
+          key: 'name',
+        },
+        {
+          title: 'Description',
+          dataIndex: 'description',
+          key: 'description',
+        },
+        {
+          title: 'Actions',
+          key: 'actions',
+          render: (text, record) => (
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Button size="small" type="primary" onClick={() => {
+                setDeptModal({ visible: true, mode: 'edit', record });
+                deptForm.setFieldsValue({ name: record.name, description: record.description });
+              }}>Edit</Button>
+              <Button size="small" danger onClick={() => {
+                setDeptDeleteModal({ visible: true, record });
+              }}>Delete</Button>
+            </div>
+          ),
+          width: 120,
+        }
+      ]}
+      dataSource={departments}
+      rowKey="_id"
+      pagination={false}
+    />
+    {/* Add/Edit Department Modal */}
+    <Modal
+      title={deptModal.mode === 'add' ? 'Add Department' : 'Edit Department'}
+      open={deptModal.visible}
+      onCancel={() => {
+        setDeptModal({ visible: false, mode: 'add', record: null });
+        deptForm.resetFields();
+      }}
+      onOk={() => {
+        deptForm.validateFields().then(values => {
+          if (deptModal.mode === 'add') handleAddDepartment(values);
+          else handleEditDepartment(values);
+        });
+      }}
+      okText={deptModal.mode === 'add' ? 'Add' : 'Update'}
+      cancelText="Cancel"
+    >
+      <Form form={deptForm} layout="vertical">
+        <Form.Item name="name" label="Department Name" rules={[{ required: true, message: 'Please enter department name' }]}> 
+          <Input placeholder="Enter department name" />
+        </Form.Item>
+        <Form.Item name="description" label="Description">
+          <Input.TextArea placeholder="Enter description" rows={3} />
+        </Form.Item>
+      </Form>
+    </Modal>
+    {/* Delete Department Modal */}
+    <Modal
+      title="Delete Department"
+      open={deptDeleteModal.visible}
+      onCancel={() => setDeptDeleteModal({ visible: false, record: null })}
+      onOk={() => handleDeleteDepartment(deptDeleteModal.record)}
+      okText="Delete"
+      okType="danger"
+      cancelText="Cancel"
+      centered
+    >
+      <p>Are you sure you want to delete department <b>{deptDeleteModal.record?.name}</b>?</p>
+      <p style={{ color: '#ff4d4f', fontSize: '14px' }}>This action cannot be undone.</p>
+    </Modal>
+  </Card>
+)}
           {selectedSection === 'add-leave-type' && (
             <Card bordered={false} style={{ borderRadius: 12, marginBottom: 32, background: '#f9fbff', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
               <Title level={4}>Add Leave Type</Title>
@@ -571,9 +712,91 @@ const AdminDashboard = () => {
           )}
           {selectedSection === 'employees' && (
             <Card bordered={false} style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', marginBottom: 32 }}>
-              <Title level={4} style={{ color: '#1a223f', marginBottom: 20 }}>Employees & Managers</Title>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                <Title level={4} style={{ color: '#1a223f', margin: 0 }}>Employees & Managers</Title>
+                <Button 
+                  type="primary" 
+                  icon={<PlusOutlined />}
+                  onClick={() => {
+                    setEmployeeModal({ visible: true, mode: 'add', record: null });
+                    employeeForm.resetFields();
+                  }}
+                >
+                  Add Employee
+                </Button>
+              </div>
               <Table 
-                columns={userColumns}
+                columns={[
+                  {
+                    title: '#',
+                    dataIndex: 'index',
+                    key: 'index',
+                    render: (text, record, index) => index + 1,
+                    width: 60,
+                  },
+                  {
+                    title: 'Employee Name',
+                    dataIndex: 'email',
+                    key: 'name',
+                    render: email => email.split('@')[0].charAt(0).toUpperCase() + email.split('@')[0].slice(1)
+                  },
+                  {
+                    title: 'Email',
+                    dataIndex: 'email',
+                    key: 'email',
+                  },
+                  {
+                    title: 'Role',
+                    dataIndex: 'role',
+                    key: 'role',
+                    render: role => role ? (role.charAt(0).toUpperCase() + role.slice(1)) : '-'
+                  },
+                  {
+                    title: 'Department',
+                    dataIndex: 'department',
+                    key: 'department',
+                    render: dept => dept ? (dept.charAt(0).toUpperCase() + dept.slice(1)) : '-'
+                  },
+                  {
+                    title: 'Manager',
+                    dataIndex: 'manager',
+                    key: 'manager',
+                    render: manager => manager || '-'
+                  },
+                  {
+                    title: 'Actions',
+                    key: 'actions',
+                    render: (text, record) => (
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <Button 
+                          size="small" 
+                          type="primary"
+                          onClick={() => {
+                            setEmployeeModal({ visible: true, mode: 'edit', record });
+                            employeeForm.setFieldsValue({
+                              email: record.email,
+                              role: record.role,
+                              department: record.department,
+                              manager: record.manager
+                            });
+                          }}
+                        >
+                          Edit
+                        </Button>
+                        <Button 
+                          size="small" 
+                          danger
+                          onClick={() => {
+                            setDeleteConfirmModal({ visible: true, employee: record });
+                          }}
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    ),
+                    width: 120,
+                  }
+                ]}
                 dataSource={users
                   .filter(u => u.role !== 'admin')
                   .map(user => ({
@@ -581,7 +804,8 @@ const AdminDashboard = () => {
                     ...user
                   }))}
                 locale={{ emptyText: "No employees or managers found" }}
-                pagination={false}
+                pagination={{ pageSize: 10, showSizeChanger: true }}
+                scroll={{ x: 800 }}
               />
             </Card>
           )}
@@ -664,8 +888,12 @@ const AdminDashboard = () => {
                 axios.put(`${BACKEND_URL}/api/leave-request/${editModal.record._id}/admin-edit`, payload)
                   .then(res => {
                     if (res.data.success) {
+                      const updatedRequest = { ...editModal.record, ...payload };
                       setLeaveRequests(prev => prev.map(lr =>
-                        lr._id === editModal.record._id ? { ...lr, ...payload } : lr
+                        lr._id === editModal.record._id ? updatedRequest : lr
+                      ));
+                      setLatestApplications(prev => prev.map(lr =>
+                        lr._id === editModal.record._id ? updatedRequest : lr
                       ));
                       message.success('Leave request updated');
                     } else {
@@ -705,6 +933,132 @@ const AdminDashboard = () => {
                 </Select>
               </Form.Item>
             </Form>
+          </Modal>
+          
+          {/* Employee Add/Edit Modal */}
+          <Modal
+            title={employeeModal.mode === 'add' ? 'Add New Employee' : 'Edit Employee'}
+            open={employeeModal.visible}
+            onCancel={() => {
+              setEmployeeModal({ visible: false, mode: 'add', record: null });
+              employeeForm.resetFields();
+            }}
+            onOk={() => {
+              employeeForm.validateFields().then(values => {
+                if (employeeModal.mode === 'add') {
+                  handleAddEmployee(values);
+                } else {
+                  handleEditEmployee(values);
+                }
+              }).catch(error => {
+                console.error('Validation failed:', error);
+              });
+            }}
+            okText={employeeModal.mode === 'add' ? 'Add Employee' : 'Update Employee'}
+            cancelText="Cancel"
+            width={600}
+          >
+            <Form 
+              form={employeeForm} 
+              layout="vertical"
+              initialValues={{
+                role: 'employee',
+                department: 'hr'
+              }}
+            >
+              <Form.Item 
+                name="email" 
+                label="Email Address" 
+                rules={[
+                  { required: true, message: 'Please enter email address' },
+                  { type: 'email', message: 'Please enter a valid email address' }
+                ]}
+              >
+                <Input 
+                  placeholder="Enter employee email" 
+                  disabled={employeeModal.mode === 'edit'}
+                />
+              </Form.Item>
+              
+              <Form.Item 
+                name="role" 
+                label="Role" 
+                rules={[{ required: true, message: 'Please select a role' }]}
+              >
+                <Select placeholder="Select role">
+                  <Select.Option value="employee">Employee</Select.Option>
+                  <Select.Option value="manager">Manager</Select.Option>
+                </Select>
+              </Form.Item>
+              
+              <Form.Item 
+                name="department" 
+                label="Department" 
+                rules={[{ required: true, message: 'Please select a department' }]}
+              >
+                <Select placeholder="Select department">
+                  <Select.Option value="hr">HR</Select.Option>
+                  <Select.Option value="it">IT</Select.Option>
+                  <Select.Option value="finance">Finance</Select.Option>
+                  <Select.Option value="marketing">Marketing</Select.Option>
+                  <Select.Option value="operations">Operations</Select.Option>
+                </Select>
+              </Form.Item>
+              
+              <Form.Item 
+                name="manager" 
+                label="Manager" 
+                rules={[{ required: true, message: 'Please select a manager' }]}
+              >
+                <Select 
+                  placeholder="Select manager" 
+                  showSearch
+                  filterOption={(input, option) =>
+                    option?.children?.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                  }
+                  onChange={(value) => {
+                    // Auto-fill manager when selected
+                    const selectedManager = users.find(user => user.email === value);
+                    if (selectedManager && selectedManager.department) {
+                      employeeForm.setFieldsValue({ department: selectedManager.department });
+                    }
+                  }}
+                >
+                  {users
+                    .filter(user => user.role === 'manager')
+                    .map(manager => (
+                      <Select.Option key={manager._id || manager.email} value={manager.email}>
+                        {manager.email.split('@')[0].charAt(0).toUpperCase() + manager.email.split('@')[0].slice(1)} ({manager.department || 'No Dept'}) - {manager.email}
+                      </Select.Option>
+                    ))
+                  }
+                </Select>
+              </Form.Item>
+            </Form>
+          </Modal>
+          
+          {/* Delete Confirmation Modal */}
+          <Modal
+            title="Delete Employee"
+            open={deleteConfirmModal.visible}
+            onCancel={() => setDeleteConfirmModal({ visible: false, employee: null })}
+            onOk={() => handleDeleteEmployee(deleteConfirmModal.employee)}
+            okText="Delete"
+            okType="danger"
+            cancelText="Cancel"
+            centered
+          >
+            <p>
+              Are you sure you want to delete employee{' '}
+              <strong>
+                {deleteConfirmModal.employee?.email?.split('@')[0]?.charAt(0)?.toUpperCase() + 
+                 deleteConfirmModal.employee?.email?.split('@')[0]?.slice(1)}
+              </strong>{' '}
+              ({deleteConfirmModal.employee?.email})?
+            </p>
+            <p style={{ color: '#ff4d4f', fontSize: '14px' }}>
+              This action cannot be undone and will remove all associated data.
+            </p>
           </Modal>
         </Content>
       </Layout>

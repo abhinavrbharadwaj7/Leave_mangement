@@ -259,3 +259,35 @@ h2 {
   border-color: #1565c0 !important;
   color: #fff !important;
 }
+
+/* Default blue styling for all buttons in AdminDashboard */
+.ant-btn-primary {
+  background-color: #0077B6 !important;
+  border-color: #0077B6 !important;
+  color: #fff !important;
+  border-radius: 6px !important;
+}
+
+.ant-btn-primary:hover,
+.ant-btn-primary:focus {
+  background-color: #005a8a !important;
+  border-color: #005a8a !important;
+  color: #fff !important;
+}
+
+/* Blue styling for default buttons */
+.ant-btn {
+  border-radius: 6px !important;
+}
+
+.ant-btn-default {
+  color: #0077B6 !important;
+  border-color: #0077B6 !important;
+}
+
+.ant-btn-default:hover,
+.ant-btn-default:focus {
+  color: #005a8a !important;
+  border-color: #005a8a !important;
+  background-color: #f0f8ff !important;
+}
