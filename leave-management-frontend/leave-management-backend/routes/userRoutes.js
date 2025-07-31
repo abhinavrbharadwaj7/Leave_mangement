@@ -47,7 +47,7 @@ const mailOptions = {
                                 <div style="background-color: rgba(255,255,255,0.15); width: 90px; height: 90px; border-radius: 50%; margin: 0 auto 25px; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px);">
                                     <img
                                         alt="Acquis Compliance"
-                                        src="https://www.acquiscompliance.com/static/brand-logo-20f74545f9b7c6443e60be675812a5cd.png"
+                                        src="C:/Users/abhinav/OneDrive/Desktop/leave mangement/leave-management-frontend/src/assets/unnamed.jpg"
                                         height="45px"
                                         style="filter: brightness(0) invert(1);"
                                     />
