@@ -302,11 +302,23 @@ const [selectedStatus, setSelectedStatus] = useState('');
             </div>
           </div>
           <div className="stat-card">
-            <div className="stat-title">Team Members on Leave</div>
-            <div className="stat-value">
-              {leaveRequests.filter(req => req.status === 'approved').length}
-            </div>
-          </div>
+  <div className="stat-title">Team Members on Leave</div>
+  <div className="stat-value">
+    {(() => {
+      const today = new Date();
+      const onLeaveEmails = new Set(
+        leaveRequests
+          .filter(req =>
+            req.status === 'approved' &&
+            new Date(req.startDate) <= today &&
+            new Date(req.endDate) >= today
+          )
+          .map(req => req.email)
+      );
+      return onLeaveEmails.size;
+    })()}
+  </div>
+</div>
           <div className="stat-card">
             <div className="stat-title">Total Team Size</div>
             <div className="stat-value">{team.length}</div>

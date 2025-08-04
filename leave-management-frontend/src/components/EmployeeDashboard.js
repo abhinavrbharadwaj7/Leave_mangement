@@ -174,15 +174,15 @@ const EmployeeDashboard = () => {
 
   const handleEditSubmit = async (values) => {
     try {
+      const leaveId = selectedLeave._id || selectedLeave.id;
       const leavePayload = {
-        id: selectedLeave.id,
         leaveType: values.leaveType,
         startDate: values.dateRange[0].format('YYYY-MM-DD'),
         endDate: values.dateRange[1].format('YYYY-MM-DD'),
         reason: values.reason,
       };
 
-      const response = await axios.put(`${BACKEND_URL}/api/leave-request`, leavePayload);
+      const response = await axios.put(`${BACKEND_URL}/api/leave-request/${leaveId}`, leavePayload);
 
       if (response.data.success) {
         message.success('Leave request updated successfully');
@@ -199,7 +199,8 @@ const EmployeeDashboard = () => {
 
   const handleDeleteConfirm = async () => {
     try {
-      const response = await axios.delete(`${BACKEND_URL}/api/leave-request/${selectedLeave.id}`);
+      const leaveId = selectedLeave._id || selectedLeave.id;
+      const response = await axios.delete(`${BACKEND_URL}/api/leave-request/${leaveId}`);
 
       if (response.data.success) {
         message.success('Leave request deleted successfully');
@@ -316,9 +317,9 @@ const EmployeeDashboard = () => {
 
                 <Card title="Pending Leave Requests" hoverable className="dashboard-card" extra={<CalendarOutlined />}>
                   <div className="pending-leave-list">
-                    {allLeaveRequests.filter(req => req.status === 'pending').length > 0 ? (
+                    {allLeaveRequests.filter(req => req.status === 'pending' && req.email === userEmail).length > 0 ? (
                       allLeaveRequests
-                        .filter(req => req.status === 'pending')
+                        .filter(req => req.status === 'pending' && req.email === userEmail)
                         .map((leave, index) => (
                           <div key={index} className="pending-leave-item">
                             <div className="leave-user">
@@ -390,24 +391,6 @@ const EmployeeDashboard = () => {
                       <p><b>From:</b> {new Date(leave.startDate).toLocaleDateString()}</p>
                       <p><b>To:</b> {new Date(leave.endDate).toLocaleDateString()}</p>
                       <p><b>Reason:</b> {leave.reason}</p>
-                      {leave.status === 'pending' && (
-                        <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
-                          <Button 
-                            size="small" 
-                            type="primary" 
-                            onClick={() => handleEditLeave(leave)}
-                          >
-                            Edit
-                          </Button>
-                          <Button 
-                            size="small" 
-                            danger 
-                            onClick={() => handleDeleteLeave(leave)}
-                          >
-                            Delete
-                          </Button>
-                        </div>
-                      )}
                     </Card>
                   ))
                 ) : (
