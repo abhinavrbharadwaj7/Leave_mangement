@@ -550,7 +550,7 @@ router.get('/users/all', async (req, res) => {
 // Create new employee
 router.post('/users/create', async (req, res) => {
   try {
-    const { email, role, department, manager } = req.body;
+    const { email, role, department, manager, leaveBalance } = req.body;
     
     // Validate required fields
     if (!email || !role || !department) {
@@ -560,21 +560,17 @@ router.post('/users/create', async (req, res) => {
       });
     }
     
-    // Check if user already exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({
-        success: false,
-        message: 'User with this email already exists'
-      });
-    }
-    
-    // Create new user
+    // Create new user with leave balance
     const newUser = new User({
       email,
       role,
       department,
-      manager: manager || null
+      manager: manager || null,
+      leaveBalance: {
+        casual: leaveBalance?.casual || 12,
+        sick: leaveBalance?.sick || 12,
+        earned: leaveBalance?.earned || 15
+      }
     });
     
     await newUser.save();
@@ -587,15 +583,15 @@ router.post('/users/create', async (req, res) => {
         email: newUser.email,
         role: newUser.role,
         department: newUser.department,
-        manager: newUser.manager
+        manager: newUser.manager,
+        leaveBalance: newUser.leaveBalance
       }
     });
   } catch (error) {
-    console.error('❌ Error creating employee:', error);
+    console.error('Error creating employee:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to create employee',
-      error: error.message
+      message: 'Failed to create employee'
     });
   }
 });

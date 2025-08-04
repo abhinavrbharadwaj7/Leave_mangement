@@ -22,6 +22,11 @@ const userSchema = new mongoose.Schema({
   otp: {
     code: String,
     expiresAt: Date
+  },
+  leaveBalance: {
+    casual: { type: Number, default: 12 },
+    sick: { type: Number, default: 12 },
+    earned: { type: Number, default: 15 }
   }
 });
 
