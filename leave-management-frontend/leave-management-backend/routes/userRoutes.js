@@ -359,16 +359,89 @@ router.get('/leave-requests/:email', async (req, res) => {
   }
 });
 
-// Create leave request (employee)
+// Helper function to calculate days between dates
+const calculateLeaveDays = (startDate, endDate) => {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const timeDiff = end.getTime() - start.getTime();
+  return Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1; // +1 to include both start and end dates
+};
+
+// Helper function to update leave balance
+const updateLeaveBalance = async (email, leaveType, leaveDays) => {
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Check if user has sufficient leave balance
+    const currentBalance = user.leaveBalance[leaveType] || 0;
+    if (currentBalance < leaveDays) {
+      throw new Error(`Insufficient ${leaveType} leave balance. Available: ${currentBalance}, Required: ${leaveDays}`);
+    }
+
+    // Deduct leave days from balance
+    user.leaveBalance[leaveType] = currentBalance - leaveDays;
+    await user.save();
+
+    console.log(`✅ Updated leave balance for ${email}: ${leaveType} reduced by ${leaveDays} days`);
+    return user.leaveBalance;
+  } catch (error) {
+    console.error('❌ Error updating leave balance:', error);
+    throw error;
+  }
+};
+
+// Helper function to restore leave balance (when leave is rejected or deleted)
+const restoreLeaveBalance = async (email, leaveType, leaveDays) => {
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Add leave days back to balance
+    user.leaveBalance[leaveType] = (user.leaveBalance[leaveType] || 0) + leaveDays;
+    await user.save();
+
+    console.log(`✅ Restored leave balance for ${email}: ${leaveType} increased by ${leaveDays} days`);
+    return user.leaveBalance;
+  } catch (error) {
+    console.error('❌ Error restoring leave balance:', error);
+    throw error;
+  }
+};
+
+// Update the leave request creation route
 router.post('/leave-request', async (req, res) => {
   try {
     const { email, leaveType, startDate, endDate, reason, status, manager } = req.body;
-    // If status is provided (manager applying as employee), use it, else default to 'pending'
+    
+    // Calculate leave days
+    const leaveDays = calculateLeaveDays(startDate, endDate);
+    
+    // Check if user has sufficient leave balance
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    const currentBalance = user.leaveBalance[leaveType] || 0;
+    if (currentBalance < leaveDays) {
+      return res.status(400).json({
+        success: false,
+        message: `Insufficient ${leaveType} leave balance. Available: ${currentBalance}, Required: ${leaveDays}`
+      });
+    }
+
+    // Create leave request
     const leaveStatus = status || 'pending';
-    // If manager is provided in body, use it, else get from user profile
     let managerValue = manager;
     if (typeof managerValue === 'undefined') {
-      const user = await User.findOne({ email });
       managerValue = user?.manager || '';
     }
 
@@ -379,142 +452,114 @@ router.post('/leave-request', async (req, res) => {
       endDate: new Date(endDate),
       reason,
       status: leaveStatus,
-      manager: managerValue
+      manager: managerValue,
+      leaveDays: leaveDays // Store the calculated leave days
     });
 
     await leaveRequest.save();
+
+    // Only deduct leave balance if the leave is approved immediately
+    // (For manager self-approval or admin approval)
+    if (leaveStatus === 'approved') {
+      await updateLeaveBalance(email, leaveType, leaveDays);
+    }
+
     res.status(201).json({
       success: true,
       message: 'Leave request submitted successfully',
-      data: leaveRequest
+      data: {
+        ...leaveRequest.toObject(),
+        leaveDays: leaveDays,
+        remainingBalance: user.leaveBalance
+      }
     });
   } catch (error) {
     console.error('Error creating leave request:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to submit leave request'
+      message: error.message || 'Failed to submit leave request'
     });
   }
 });
 
-// Manager approve/reject leave request with comment
+// Update the leave request action route (approve/reject)
 router.post('/leave-request-action', async (req, res) => {
   try {
     const { id, status, comment } = req.body;
     const leaveRequest = await LeaveRequest.findById(id);
-    if (!leaveRequest) {
-      return res.status(404).json({ success: false, message: 'Leave request not found' });
-    }
-    leaveRequest.status = status;
-    leaveRequest.managerComment = comment || '';
-    await leaveRequest.save();
-    res.json({ success: true, message: `Leave request ${status}` });
-  } catch (error) {
-    console.error('Error updating leave request:', error);
-    res.status(500).json({ success: false, message: 'Action failed' });
-  }
-});
-
-// Manager dashboard: fetch only their team's requests
-router.get('/manager-leave-requests/:managerEmail', async (req, res) => {
-  try {
-    const { managerEmail } = req.params;
-    const leaveRequests = await LeaveRequest.find({ manager: managerEmail }).sort({ startDate: 1 });
-    res.json({ success: true, leaveRequests });
-  } catch (error) {
-    console.error('Error fetching manager leave requests:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch leave requests' });
-  }
-});
-
-// Get team members for a manager
-router.get('/team-members/:managerEmail', async (req, res) => {
-  try {
-    const { managerEmail } = req.params;
     
-    // Verify if the requester is actually a manager
-    const manager = await User.findOne({ 
-      email: managerEmail,
-      role: 'manager'
-    });
-
-    if (!manager) {
-      return res.status(403).json({ 
+    if (!leaveRequest) {
+      return res.status(404).json({ 
         success: false, 
-        message: 'Unauthorized: Not a manager' 
+        message: 'Leave request not found' 
       });
     }
 
-    const teamMembers = await User.find({ 
-      manager: managerEmail 
-    }).select('-otp -__v'); // Exclude sensitive fields
+    const previousStatus = leaveRequest.status;
+    const leaveDays = leaveRequest.leaveDays || calculateLeaveDays(leaveRequest.startDate, leaveRequest.endDate);
+
+    // Update leave request
+    leaveRequest.status = status;
+    leaveRequest.managerComment = comment || '';
+    leaveRequest.leaveDays = leaveDays; // Ensure leaveDays is stored
+    await leaveRequest.save();
+
+    // Handle leave balance updates based on status change
+    if (status === 'approved' && previousStatus !== 'approved') {
+      // Approve: Deduct from leave balance
+      try {
+        await updateLeaveBalance(leaveRequest.email, leaveRequest.leaveType, leaveDays);
+      } catch (balanceError) {
+        return res.status(400).json({
+          success: false,
+          message: balanceError.message
+        });
+      }
+    } else if (status === 'rejected' && previousStatus === 'approved') {
+      // Reject previously approved leave: Restore leave balance
+      await restoreLeaveBalance(leaveRequest.email, leaveRequest.leaveType, leaveDays);
+    }
 
     res.json({ 
       success: true, 
-      teamMembers,
-      count: teamMembers.length
+      message: `Leave request ${status}`,
+      leaveDays: leaveDays
     });
   } catch (error) {
-    console.error('Error fetching team members:', error);
+    console.error('Error updating leave request:', error);
     res.status(500).json({ 
       success: false, 
-      message: 'Failed to fetch team members' 
+      message: 'Action failed' 
     });
   }
 });
 
-// Get combined manager dashboard data
-router.get('/manager-dashboard/:managerEmail', async (req, res) => {
+// Add route to get user's leave balance
+router.get('/user-balance/:email', async (req, res) => {
   try {
-    const { managerEmail } = req.params;
-
-    // Get manager details
-    const manager = await User.findOne({ 
-      email: managerEmail,
-      role: 'manager' 
-    });
-
-    if (!manager) {
-      return res.status(403).json({
+    const { email } = req.params;
+    const user = await User.findOne({ email }).select('email leaveBalance');
+    
+    if (!user) {
+      return res.status(404).json({
         success: false,
-        message: 'Unauthorized: Not a manager'
+        message: 'User not found'
       });
     }
 
-    // Get employees under this manager
-    const teamMembers = await User.find({ 
-      department: manager.department,
-      role: 'employee'  // Only get employees
-    }).select('email role department');
-
-    // Get leave requests for team members
-    const leaveRequests = await LeaveRequest.find({
-      email: { $in: teamMembers.map(member => member.email) }
-    }).sort({ createdAt: -1 });
-
     res.json({
       success: true,
-      data: {
-        manager,
-        teamMembers,
-        leaveRequests,
-        stats: {
-          totalTeamMembers: teamMembers.length,
-          pendingRequests: leaveRequests.filter(req => req.status === 'pending').length,
-          onLeave: leaveRequests.filter(req => 
-            req.status === 'approved' &&
-            new Date(req.startDate) <= new Date() &&
-            new Date(req.endDate) >= new Date()
-          ).length
-        }
+      leaveBalance: user.leaveBalance || {
+        casual: 0,
+        sick: 0,
+        earned: 0
       }
     });
-
   } catch (error) {
-    console.error('Error fetching manager dashboard data:', error);
+    console.error('Error fetching user balance:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch manager dashboard data'
+      message: 'Failed to fetch leave balance'
     });
   }
 });

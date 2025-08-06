@@ -39,6 +39,10 @@ const leaveRequestSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now
+  },
+  leaveDays: {
+    type: Number,
+    required: false // Will be calculated automatically
   }
 }, {
   timestamps: true
