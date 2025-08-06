@@ -519,11 +519,11 @@ router.get('/manager-dashboard/:managerEmail', async (req, res) => {
   }
 });
 
-// Add or update the route for fetching all users
+// Update the route for fetching all users to include leave balance
 router.get('/users/all', async (req, res) => {
   try {
     const users = await User.find({})
-      .select('email role department') // Only select needed fields
+      .select('email role department manager leaveBalance') // Include leaveBalance in selection
       .sort({ email: 1 });
     
     res.json({
@@ -532,6 +532,12 @@ router.get('/users/all', async (req, res) => {
         email: user.email,
         role: user.role || 'Not Assigned',
         department: user.department || 'Not Assigned',
+        manager: user.manager || null,
+        leaveBalance: user.leaveBalance || {
+          casual: 0,
+          sick: 0,
+          earned: 0
+        },
         _id: user._id
       }))
     });
@@ -545,62 +551,11 @@ router.get('/users/all', async (req, res) => {
   }
 });
 
-// ===== EMPLOYEE CRUD API ENDPOINTS =====
-
-// Create new employee
-router.post('/users/create', async (req, res) => {
-  try {
-    const { email, role, department, manager, leaveBalance } = req.body;
-    
-    // Validate required fields
-    if (!email || !role || !department) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email, role, and department are required'
-      });
-    }
-    
-    // Create new user with leave balance
-    const newUser = new User({
-      email,
-      role,
-      department,
-      manager: manager || null,
-      leaveBalance: {
-        casual: leaveBalance?.casual || 12,
-        sick: leaveBalance?.sick || 12,
-        earned: leaveBalance?.earned || 15
-      }
-    });
-    
-    await newUser.save();
-    
-    res.status(201).json({
-      success: true,
-      message: 'Employee created successfully',
-      user: {
-        _id: newUser._id,
-        email: newUser.email,
-        role: newUser.role,
-        department: newUser.department,
-        manager: newUser.manager,
-        leaveBalance: newUser.leaveBalance
-      }
-    });
-  } catch (error) {
-    console.error('Error creating employee:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to create employee'
-    });
-  }
-});
-
-// Update employee
+// Update the edit employee route to handle leave balance updates
 router.put('/users/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { role, department, manager } = req.body;
+    const { role, department, manager, leaveBalance } = req.body;
     
     // Validate required fields
     if (!role || !department) {
@@ -610,14 +565,26 @@ router.put('/users/:id', async (req, res) => {
       });
     }
     
+    // Prepare update object
+    const updateData = {
+      role,
+      department,
+      manager: manager || null
+    };
+
+    // Include leave balance if provided
+    if (leaveBalance) {
+      updateData.leaveBalance = {
+        casual: leaveBalance.casual || 0,
+        sick: leaveBalance.sick || 0,
+        earned: leaveBalance.earned || 0
+      };
+    }
+    
     // Find and update user
     const updatedUser = await User.findByIdAndUpdate(
       id,
-      {
-        role,
-        department,
-        manager: manager || null
-      },
+      updateData,
       { new: true, runValidators: true }
     );
     
@@ -636,7 +603,8 @@ router.put('/users/:id', async (req, res) => {
         email: updatedUser.email,
         role: updatedUser.role,
         department: updatedUser.department,
-        manager: updatedUser.manager
+        manager: updatedUser.manager,
+        leaveBalance: updatedUser.leaveBalance
       }
     });
   } catch (error) {
