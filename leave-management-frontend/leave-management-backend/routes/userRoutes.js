@@ -739,4 +739,156 @@ router.get('/users/:id', async (req, res) => {
   }
 });
 
+// Update the manager dashboard route to fix data fetching issues
+router.get('/manager-dashboard/:managerEmail', async (req, res) => {
+  try {
+    const { managerEmail } = req.params;
+    console.log('Fetching manager dashboard for:', managerEmail); // Debug log
+
+    // Get manager details
+    const manager = await User.findOne({ 
+      email: managerEmail,
+      role: 'manager' 
+    });
+
+    if (!manager) {
+      return res.status(403).json({
+        success: false,
+        message: 'Unauthorized: Not a manager'
+      });
+    }
+
+    console.log('Manager found:', manager.email, manager.department); // Debug log
+
+    // Get ALL employees in the same department as the manager
+    const teamMembers = await User.find({ 
+      department: manager.department,
+      role: { $in: ['employee', 'manager'] }, // Include both employees and managers
+      email: { $ne: managerEmail } // Exclude the manager themselves
+    }).select('email role department leaveBalance');
+
+    console.log('Team members found:', teamMembers.length); // Debug log
+    console.log('Team members:', teamMembers.map(m => m.email)); // Debug log
+
+    // Get ALL leave requests for team members (not just those with manager field)
+    const teamEmails = teamMembers.map(member => member.email);
+    teamEmails.push(managerEmail); // Include manager's own requests
+    
+    const leaveRequests = await LeaveRequest.find({
+      email: { $in: teamEmails }
+    }).sort({ createdAt: -1 });
+
+    console.log('Leave requests found:', leaveRequests.length); // Debug log
+    console.log('Leave request emails:', leaveRequests.map(lr => lr.email)); // Debug log
+
+    // Calculate stats
+    const stats = {
+      totalTeamMembers: teamMembers.length,
+      pendingRequests: leaveRequests.filter(req => req.status === 'pending').length,
+      approvedRequests: leaveRequests.filter(req => req.status === 'approved').length,
+      onLeave: leaveRequests.filter(req => {
+        if (req.status !== 'approved') return false;
+        const today = new Date();
+        const startDate = new Date(req.startDate);
+        const endDate = new Date(req.endDate);
+        return startDate <= today && endDate >= today;
+      }).length
+    };
+
+    console.log('Stats calculated:', stats); // Debug log
+
+    res.json({
+      success: true,
+      data: {
+        manager,
+        teamMembers,
+        leaveRequests,
+        stats
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error fetching manager dashboard data:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch manager dashboard data',
+      error: error.message
+    });
+  }
+});
+
+// Add a separate route to get team members for a manager
+router.get('/team-members/:managerEmail', async (req, res) => {
+  try {
+    const { managerEmail } = req.params;
+    
+    // Verify if the requester is actually a manager
+    const manager = await User.findOne({ 
+      email: managerEmail,
+      role: 'manager'
+    });
+
+    if (!manager) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Unauthorized: Not a manager' 
+      });
+    }
+
+    // Get team members in the same department
+    const teamMembers = await User.find({ 
+      department: manager.department,
+      role: 'employee' // Only employees report to managers
+    }).select('email role department leaveBalance');
+
+    console.log(`✅ Found ${teamMembers.length} team members for manager ${managerEmail}`);
+
+    res.json({ 
+      success: true, 
+      teamMembers,
+      count: teamMembers.length
+    });
+  } catch (error) {
+    console.error('❌ Error fetching team members:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fetch team members',
+      error: error.message
+    });
+  }
+});
+
+// Update the manager leave requests route
+router.get('/manager-leave-requests/:managerEmail', async (req, res) => {
+  try {
+    const { managerEmail } = req.params;
+    
+    // Get manager to find their department
+    const manager = await User.findOne({ email: managerEmail, role: 'manager' });
+    if (!manager) {
+      return res.status(403).json({ success: false, message: 'Unauthorized' });
+    }
+
+    // Get all team members in the same department
+    const teamMembers = await User.find({ 
+      department: manager.department,
+      role: { $in: ['employee', 'manager'] }
+    }).select('email');
+
+    const teamEmails = teamMembers.map(member => member.email);
+    
+    // Get leave requests for all team members
+    const leaveRequests = await LeaveRequest.find({ 
+      email: { $in: teamEmails }
+    }).sort({ startDate: 1 });
+
+    console.log(`✅ Found ${leaveRequests.length} leave requests for manager ${managerEmail}`);
+
+    res.json({ success: true, leaveRequests });
+  } catch (error) {
+    console.error('❌ Error fetching manager leave requests:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch leave requests' });
+  }
+});
+
 module.exports = router;
