@@ -205,21 +205,30 @@ const AdminDashboard = () => {
     {
       title: 'Leave Balance',
       key: 'leaveBalance',
-      render: (_, record) => (
-        <Tooltip title={
-          <div>
-            Casual: {record.leaveBalance?.casual || 0}<br/>
-            Sick: {record.leaveBalance?.sick || 0}<br/>
-            Earned: {record.leaveBalance?.earned || 0}
-          </div>
-        }>
-          <Badge count={
-            (record.leaveBalance?.casual || 0) +
-            (record.leaveBalance?.sick || 0) +
-            (record.leaveBalance?.earned || 0)
-          } overflowCount={99} style={{ backgroundColor: '#52c41a' }} />
-        </Tooltip>
-      )
+      render: (_, record) => {
+        console.log('Rendering leave balance for:', record.email, record.leaveBalance);
+        
+        const leaveBalance = record.leaveBalance || { casual: 0, sick: 0, earned: 0 };
+        const totalLeaves = (leaveBalance.casual || 0) + (leaveBalance.sick || 0) + (leaveBalance.earned || 0);
+        
+        return (
+          <Tooltip title={
+            <div>
+              <div>Casual: {leaveBalance.casual || 0}</div>
+              <div>Sick: {leaveBalance.sick || 0}</div>
+              <div>Earned: {leaveBalance.earned || 0}</div>
+              <div><strong>Total Available: {totalLeaves}</strong></div>
+            </div>
+          }>
+            <Badge 
+              count={totalLeaves} 
+              overflowCount={99} 
+              style={{ backgroundColor: totalLeaves > 0 ? '#52c41a' : '#d9d9d9' }}
+              showZero
+            />
+          </Tooltip>
+        );
+      }
     },
     {
       title: 'Actions',
@@ -249,6 +258,7 @@ const AdminDashboard = () => {
     }
   ];
 
+  // Update the fetchUsers function to handle debugging
   const fetchUsers = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -258,14 +268,26 @@ const AdminDashboard = () => {
         }
       });
       
+      console.log('Raw response from backend:', response.data); // Debug log
+      
+      let userData = [];
       if (response.data && Array.isArray(response.data)) {
-        setUsers(response.data);
+        userData = response.data;
       } else if (response.data.users && Array.isArray(response.data.users)) {
-        setUsers(response.data.users);
+        userData = response.data.users;
       } else {
         console.warn('Invalid user data format:', response.data);
         setUsers([]);
+        return;
       }
+
+      // Debug log to check leave balance data
+      console.log('User data with leave balances:', userData);
+      userData.forEach(user => {
+        console.log(`${user.email} leave balance:`, user.leaveBalance);
+      });
+
+      setUsers(userData);
     } catch (error) {
       console.error('Error fetching users:', error.response || error);
       message.error('Failed to load users. Please check your connection.');

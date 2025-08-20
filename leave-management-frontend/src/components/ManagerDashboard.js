@@ -32,29 +32,67 @@ const [selectedStatus, setSelectedStatus] = useState('');
     try {
       setLoading(true);
       const userData = JSON.parse(localStorage.getItem('userData'));
-      if (!userData?.email) return;
+      if (!userData?.email) {
+        console.error('❌ No user data found in localStorage');
+        message.error('Please login again');
+        navigate('/');
+        return;
+      }
+
+      console.log('🔄 Fetching dashboard data for manager:', userData.email);
 
       const response = await axios.get(`${BACKEND_URL}/api/manager-dashboard/${userData.email}`);
+      
+      console.log('📊 Dashboard API response:', response.data);
+
       if (response.data.success) {
         const { manager, teamMembers, leaveRequests, stats } = response.data.data;
+        
+        console.log('✅ Manager data:', manager);
+        console.log('✅ Team members:', teamMembers?.length || 0);
+        console.log('✅ Leave requests:', leaveRequests?.length || 0);
+        console.log('✅ Stats:', stats);
+
         setManagerData(manager);
-        setTeamMembers(teamMembers);
-        setLeaveRequests(leaveRequests);
-        setCalendarData(leaveRequests);
-        setTeam(teamMembers); // Update team state
+        setTeamMembers(teamMembers || []);
+        setLeaveRequests(leaveRequests || []);
+        setCalendarData(leaveRequests || []);
+        setTeam(teamMembers || []);
+      } else {
+        console.error('❌ API returned success: false');
+        message.error(response.data.message || 'Failed to load dashboard data');
       }
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-      message.error('Failed to load dashboard data');
+      console.error('❌ Error fetching dashboard data:', error);
+      
+      if (error.response?.status === 403) {
+        message.error('You are not authorized as a manager');
+        navigate('/employee-dashboard');
+      } else {
+        message.error('Failed to load dashboard data. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  // Fetch leave requests and team info
+  // Add useEffect to check user authentication
   useEffect(() => {
+    const userData = JSON.parse(localStorage.getItem('userData'));
+    if (!userData) {
+      navigate('/');
+      return;
+    }
+    
+    if (userData.role !== 'manager') {
+      message.error('Access denied. Manager role required.');
+      navigate('/employee-dashboard');
+      return;
+    }
+
+    console.log('🔐 Manager authenticated:', userData.email, userData.department);
     fetchDashboardData();
-  }, []);
+  }, [navigate]);
 
   // Approve/Reject with comment
   const handleAction = (id, status) => {
@@ -71,7 +109,9 @@ const [selectedStatus, setSelectedStatus] = useState('');
       });
       message.success(`Leave request ${commentModal.action}`);
       setCommentModal({ visible: false, id: null, action: null });
-      fetchDashboardData();
+      
+      // Refresh the dashboard data to update counters
+      await fetchDashboardData();
     } catch {
       message.error('Action failed');
     }
@@ -227,12 +267,20 @@ const [selectedStatus, setSelectedStatus] = useState('');
       title: 'Status',
       key: 'status',
       render: (_, record) => {
-        const hasActiveLeave = leaveRequests.some(leave => 
-          leave.email === record.email && 
-          leave.status === 'approved' &&
-          new Date(leave.startDate) <= new Date() &&
-          new Date(leave.endDate) >= new Date()
-        );
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const hasActiveLeave = leaveRequests.some(leave => {
+          if (leave.email === record.email && leave.status === 'approved') {
+            const startDate = new Date(leave.startDate);
+            const endDate = new Date(leave.endDate);
+            startDate.setHours(0, 0, 0, 0);
+            endDate.setHours(23, 59, 59, 999);
+            
+            return today >= startDate && today <= endDate;
+          }
+          return false;
+        });
 
         return (
           <Tag color={hasActiveLeave ? 'red' : 'green'}>
@@ -306,16 +354,34 @@ const [selectedStatus, setSelectedStatus] = useState('');
   <div className="stat-value">
     {(() => {
       const today = new Date();
-      const onLeaveEmails = new Set(
-        leaveRequests
-          .filter(req =>
-            req.status === 'approved' &&
-            new Date(req.startDate) <= today &&
-            new Date(req.endDate) >= today
-          )
-          .map(req => req.email)
-      );
-      return onLeaveEmails.size;
+      today.setHours(0, 0, 0, 0); // Reset time to start of day for accurate comparison
+      
+      // Get unique team member emails who are currently on approved leave
+      const onLeaveMembers = new Set();
+      
+      leaveRequests.forEach(req => {
+        // Check if the leave request is approved and current
+        if (req.status === 'approved') {
+          const startDate = new Date(req.startDate);
+          const endDate = new Date(req.endDate);
+          startDate.setHours(0, 0, 0, 0);
+          endDate.setHours(23, 59, 59, 999); // End of day
+          
+          // Check if today falls within the leave period
+          if (today >= startDate && today <= endDate) {
+            // Verify this person is actually in our team
+            const isTeamMember = teamMembers.some(member => member.email === req.email);
+            if (isTeamMember) {
+              onLeaveMembers.add(req.email);
+              console.log(`Adding ${req.email} to on-leave list`); // Debug log
+            }
+          }
+        }
+      });
+      
+      console.log('Team members currently on leave:', Array.from(onLeaveMembers)); // Debug log
+      console.log('Total count:', onLeaveMembers.size); // Debug count
+      return onLeaveMembers.size;
     })()}
   </div>
 </div>

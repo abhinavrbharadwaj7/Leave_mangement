@@ -1,12 +1,12 @@
 .admin-dashboard-container {
   display: flex;
   min-height: 100vh;
-  background: #f4f6fa;
+  background: linear-gradient(90deg, #e2e2e2, #c9d6ff);
 }
 
 .admin-sidebar {
   width: 250px;
-  background: #1a223f !important;
+  background: linear-gradient(180deg, rgba(76, 107, 197, 0.95), rgba(63, 91, 184, 0.95)) !important;
   color: #fff;
   box-shadow: 4px 0 15px rgba(0, 0, 0, 0.1);
   border-right: none;
@@ -16,8 +16,18 @@
   padding-top: 30px;
 }
 
+/* Update the main layout background */
+.ant-layout {
+  background: linear-gradient(90deg, #e2e2e2, #c9d6ff) !important;
+}
+
+.ant-layout-content {
+  background: transparent !important;
+}
+
 .admin-profile {
-  background: #232b4a;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
   border-radius: 16px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.08);
   padding: 24px 0 16px 0;
@@ -26,6 +36,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .admin-label {
@@ -43,33 +54,37 @@
 
 .admin-nav li,
 .ant-menu-item {
-  background: #232b4a !important;
-  color: #fff !important;
+  background: transparent !important;
+  color: rgba(255, 255, 255, 0.9) !important;
   border-radius: 12px !important;
   margin-bottom: 10px !important;
   font-size: 1rem;
-  transition: background 0.2s, color 0.2s;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  transition: all 0.3s ease;
+  box-shadow: none;
 }
 
 .admin-nav li:hover,
 .ant-menu-item:hover {
-  background: #34406a !important;
-  color: #7ed957 !important;
+  background: rgba(255, 255, 255, 0.15) !important;
+  color: #ffffff !important;
+  transform: translateX(5px);
 }
 
 .ant-menu {
   background: transparent !important;
+  padding: 12px;
 }
 
 .ant-menu-item-selected {
-  background: #34406a !important;
-  color: #7ed957 !important;
+  background: rgba(255, 255, 255, 0.2) !important;
+  color: #ffffff !important;
   font-weight: 600 !important;
 }
 
 .ant-menu-item .anticon {
-  color: #7ed957 !important;
+  color: #ffffff !important;
+  font-size: 18px !important;
+  margin-right: 10px !important;
 }
 
 .add-dept {
@@ -77,7 +92,7 @@
   display: flex;
   align-items: center;
   font-size: 0.9em;
-  color: #7ed957;
+  color: #ffffff;
 }
 
 .admin-main, .ant-layout-content {
@@ -89,15 +104,21 @@
   justify-content: space-between;
   align-items: center;
   padding: 30px 0 20px 0;
-  background: #fff;
-  border-radius: 0;
-  box-shadow: none;
+  background: white !important;
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 16px;
+  z-index: 1000;
+  margin: 16px 24px;
+  border: none;
 }
 
 .admin-title {
   font-size: 2rem;
   font-weight: bold;
-  color: #1a223f;
+  color: #4c6bc5 !important;
 }
 
 .admin-topbar-right {
@@ -108,13 +129,13 @@
 
 .admin-bell {
   font-size: 1.5rem;
-  color: #1a223f;
+  color: #4c6bc5 !important;
   cursor: pointer;
 }
 
 .admin-welcome {
   font-size: 1.1rem;
-  color: #1a223f;
+  color: #4c6bc5 !important;
 }
 
 .admin-summary-cards {
@@ -124,25 +145,28 @@
 }
 
 .admin-summary-card, .ant-card {
-  background: #fff !important;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  border: 1px solid #e0e6ed;
-  border-radius: 12px;
+  background: white !important;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1) !important;
+  border: none !important;
+  border-radius: 12px !important;
   padding: 25px 35px;
   display: flex;
   flex-direction: column;
   align-items: center;
   min-width: 170px;
-  /* Remove glass effect */
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  /* Remove any glassy background */
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.admin-summary-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
 }
 
 .admin-summary-value {
   font-size: 2.2rem;
   font-weight: bold;
-  color: #1a223f;
+  color: #4c6bc5;
 }
 
 .admin-summary-label {
@@ -153,16 +177,19 @@
 }
 
 .admin-table-section {
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  background: white !important;
+  backdrop-filter: blur(10px);
+  border-radius: 12px !important;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1) !important;
   padding: 30px;
   margin-bottom: 24px;
+  border: none !important;
 }
 
 .admin-table-section h2 {
   margin-bottom: 20px;
-  color: #1a223f;
+  color: #4c6bc5;
+  font-weight: 600;
 }
 
 .admin-table {
@@ -177,12 +204,12 @@
 
 .admin-table th {
   background: #f4f6fa;
-  color: #1a223f;
+  color: #4c6bc5;
   font-weight: 600;
 }
 
 .admin-table tbody tr {
-  border-bottom: 1px solid #e0e6ed;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .admin-table tbody tr:last-child {
@@ -207,87 +234,157 @@
 }
 
 .admin-view-btn {
-  background: #1a223f;
+  background: #4c6bc5;
   color: #fff;
   border: none;
   border-radius: 6px;
   padding: 7px 18px;
   cursor: pointer;
   font-size: 1em;
-  transition: background 0.2s;
+  transition: all 0.3s ease;
 }
 
 .admin-view-btn:hover {
-  background: #232b4a;
+  background: #3f5bb8;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(76, 107, 197, 0.3);
 }
 
-/* Modal solid effect */
+/* Modal styling to match login theme */
 .ant-modal-content {
-  background: #fff !important;
-  border-radius: 16px !important;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.1) !important;
+  background: white !important;
+  backdrop-filter: blur(10px) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1) !important;
+  border: none !important;
 }
 
 .ant-modal-header {
-  background: transparent !important;
-  border-bottom: 1px solid #e0e6ed !important;
+  background: white !important;
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid #e2e2e2 !important;
+  border-radius: 12px 12px 0 0 !important;
+}
+
+.ant-modal-title {
+  color: #4c6bc5 !important;
+  font-weight: 600;
+  font-size: 18px;
 }
 
 /* Section headers */
 h2 {
-  color: #333;
+  color: #4c6bc5;
   font-weight: 600;
   margin-bottom: 20px;
 }
 
-.admin-blue-btn,
-.ant-btn.admin-blue-btn {
-  background-color: #1976d2 !important;
-  border-color: #1976d2 !important;
-  color: #fff !important;
-  font-weight: 600;
-  border-radius: 6px;
-  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.08);
-  transition: background 0.2s;
-}
-
-.admin-blue-btn:hover,
-.ant-btn.admin-blue-btn:hover,
-.admin-blue-btn:focus,
-.ant-btn.admin-blue-btn:focus {
-  background-color: #1565c0 !important;
-  border-color: #1565c0 !important;
-  color: #fff !important;
-}
-
-/* Default blue styling for all buttons in AdminDashboard */
+/* Primary button styling to match login */
 .ant-btn-primary {
-  background-color: #0077B6 !important;
-  border-color: #0077B6 !important;
+  background: #4c6bc5 !important;
+  border-color: #4c6bc5 !important;
   color: #fff !important;
-  border-radius: 6px !important;
+  border-radius: 8px !important;
+  font-weight: 500;
+  transition: all 0.3s ease;
 }
 
 .ant-btn-primary:hover,
 .ant-btn-primary:focus {
-  background-color: #005a8a !important;
-  border-color: #005a8a !important;
+  background: #3f5bb8 !important;
+  border-color: #3f5bb8 !important;
   color: #fff !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(76, 107, 197, 0.3);
 }
 
-/* Blue styling for default buttons */
+/* Default button styling */
 .ant-btn {
-  border-radius: 6px !important;
+  border-radius: 8px !important;
+  font-weight: 500;
+  transition: all 0.3s ease;
 }
 
 .ant-btn-default {
-  color: #0077B6 !important;
-  border-color: #0077B6 !important;
+  color: #4c6bc5 !important;
+  border-color: #4c6bc5 !important;
+  background: white !important;
 }
 
 .ant-btn-default:hover,
 .ant-btn-default:focus {
-  color: #005a8a !important;
-  border-color: #005a8a !important;
-  background-color: #f0f8ff !important;
+  color: #3f5bb8 !important;
+  border-color: #3f5bb8 !important;
+  background: rgba(76, 107, 197, 0.1) !important;
+  transform: translateY(-2px);
+}
+
+/* Card styling to match login theme */
+.ant-card {
+  background: white !important;
+  backdrop-filter: blur(10px);
+  border-radius: 12px !important;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1) !important;
+  border: none !important;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.ant-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Table styling */
+.ant-table-thead > tr > th {
+  background: #f4f6fa !important;
+  color: #4c6bc5 !important;
+  font-weight: 600;
+}
+
+.ant-table-tbody > tr > td {
+  background: white !important;
+}
+
+.ant-table-tbody > tr:hover > td {
+  background: rgba(76, 107, 197, 0.05) !important;
+}
+
+/* Form styling */
+.ant-form-item-label > label {
+  color: #4c6bc5 !important;
+  font-weight: 600;
+}
+
+.ant-input,
+.ant-select-selector,
+.ant-input-number {
+  border-radius: 8px !important;
+  border-color: rgba(76, 107, 197, 0.3) !important;
+}
+
+.ant-input:focus,
+.ant-select-focused .ant-select-selector,
+.ant-input-number:focus {
+  border-color: #4c6bc5 !important;
+  box-shadow: 0 0 0 2px rgba(76, 107, 197, 0.2) !important;
+}
+
+/* Header styling to match login theme */
+.ant-layout-header {
+  background: white !important;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1) !important;
+  border-radius: 12px !important;
+  margin: 16px 24px !important;
+}
+
+/* Sider styling to match the blue theme from EmployeeDashboard */
+.ant-layout-sider {
+  background: linear-gradient(180deg, rgba(76, 107, 197, 0.95), rgba(63, 91, 184, 0.95)) !important;
+}
+
+/* Update the Sider component to use the same gradient as EmployeeDashboard */
+.ant-layout .ant-layout-sider {
+  background: linear-gradient(180deg, rgba(76, 107, 197, 0.95), rgba(63, 91, 184, 0.95)) !important;
+  border-right: none !important;
+  box-shadow: 4px 0 15px rgba(0, 0, 0, 0.1) !important;
 }

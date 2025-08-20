@@ -38,6 +38,11 @@ const EmployeeDashboard = () => {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [selectedLeave, setSelectedLeave] = useState(null);
   const [editForm] = Form.useForm();
+  const [leaveBalance, setLeaveBalance] = useState({
+    casual: 0,
+    sick: 0,
+    earned: 0
+  });
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -112,10 +117,26 @@ const EmployeeDashboard = () => {
     }
   };
 
+  // Add function to fetch leave balance
+  const fetchLeaveBalance = async () => {
+    try {
+      const userData = JSON.parse(localStorage.getItem('userData'));
+      if (!userData?.email) return;
+
+      const response = await axios.get(`${BACKEND_URL}/api/user-balance/${userData.email}`);
+      if (response.data.success) {
+        setLeaveBalance(response.data.leaveBalance);
+      }
+    } catch (error) {
+      console.error('Error fetching leave balance:', error);
+    }
+  };
+
   useEffect(() => {
     fetchLeaveHistory();
     fetchAllLeaveRequests();
     fetchUserData();
+    fetchLeaveBalance(); // Add this
   }, []);
 
   const handleLeaveSubmit = async (values) => {
@@ -123,6 +144,18 @@ const EmployeeDashboard = () => {
       const userData = JSON.parse(localStorage.getItem('userData'));
       if (!userData || !userData.email) {
         message.error('User data not found. Please login again.');
+        return;
+      }
+
+      // Calculate leave days for validation
+      const startDate = values.dateRange[0];
+      const endDate = values.dateRange[1];
+      const leaveDays = endDate.diff(startDate, 'day') + 1;
+
+      // Check if user has sufficient balance
+      const currentBalance = leaveBalance[values.leaveType] || 0;
+      if (currentBalance < leaveDays) {
+        message.error(`Insufficient ${values.leaveType} leave balance. Available: ${currentBalance}, Required: ${leaveDays}`);
         return;
       }
 
@@ -150,10 +183,12 @@ const EmployeeDashboard = () => {
         leaveForm.resetFields();
         fetchLeaveHistory();
         fetchAllLeaveRequests();
+        fetchLeaveBalance(); // Refresh balance
       }
     } catch (error) {
       console.error('Leave request error:', error);
-      message.error('Failed to submit leave request. Please try again.');
+      const errorMessage = error.response?.data?.message || 'Failed to submit leave request. Please try again.';
+      message.error(errorMessage);
     }
   };
 
@@ -212,6 +247,10 @@ const EmployeeDashboard = () => {
       console.error('Leave request delete error:', error);
       message.error('Failed to delete leave request. Please try again.');
     }
+  };
+
+  const calculateProgress = (used, total) => {
+    return total > 0 ? Math.round((used / total) * 100) : 0;
   };
 
   if (initializing) {
@@ -280,19 +319,40 @@ const EmployeeDashboard = () => {
                 <h3>Leave Summary</h3>
                 <div className="leave-progress">
                   <div>
-                    <Progress type="dashboard" percent={40} strokeColor="magenta" />
+                    <Progress 
+                      type="dashboard" 
+                      percent={calculateProgress(
+                        (12 - (leaveBalance.casual || 0)), // Used = Total - Available
+                        12
+                      )} 
+                      strokeColor="magenta" 
+                    />
                     <p>Casual Leave</p>
-                    <p>Available: 3 | Used: 2 | Total: 5</p>
+                    <p>Available: {leaveBalance.casual || 0} | Used: {12 - (leaveBalance.casual || 0)} | Total: 12</p>
                   </div>
                   <div>
-                    <Progress type="dashboard" percent={20} strokeColor="blue" />
+                    <Progress 
+                      type="dashboard" 
+                      percent={calculateProgress(
+                        (12 - (leaveBalance.sick || 0)),
+                        12
+                      )} 
+                      strokeColor="blue" 
+                    />
                     <p>Sick Leave</p>
-                    <p>Available: 4 | Used: 1 | Total: 5</p>
+                    <p>Available: {leaveBalance.sick || 0} | Used: {12 - (leaveBalance.sick || 0)} | Total: 12</p>
                   </div>
                   <div>
-                    <Progress type="dashboard" percent={20} strokeColor="green" />
+                    <Progress 
+                      type="dashboard" 
+                      percent={calculateProgress(
+                        (15 - (leaveBalance.earned || 0)),
+                        15
+                      )} 
+                      strokeColor="green" 
+                    />
                     <p>Earned Leave</p>
-                    <p>Available: 8 | Used: 2 | Total: 10</p>
+                    <p>Available: {leaveBalance.earned || 0} | Used: {15 - (leaveBalance.earned || 0)} | Total: 15</p>
                   </div>
                 </div>
               </div>
