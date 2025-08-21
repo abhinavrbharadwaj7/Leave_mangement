@@ -67,6 +67,10 @@ const AdminDashboard = () => {
   // Add these to the existing state declarations
   const [editEmployeeModal, setEditEmployeeModal] = useState({ visible: false, record: null });
   const [editEmployeeForm] = Form.useForm();
+  // Add filter states
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [leaveTypeFilter, setLeaveTypeFilter] = useState('all');
+  const [filteredLeaveRequests, setFilteredLeaveRequests] = useState([]);
 
   // Move columns definition here so it has access to the above state setters
   const columns = [
@@ -155,11 +159,6 @@ const AdminDashboard = () => {
       label: 'Leave Management',
     },
     {
-      key: 'change-password',
-      icon: <KeyOutlined />,
-      label: 'Change Password',
-    },
-    {
       key: 'sign-out',
       icon: <LogoutOutlined />,
       label: 'Sign Out',
@@ -174,21 +173,26 @@ const AdminDashboard = () => {
     'manage-leave-type': 'Manage Leave Type',
     'employees': 'Employees',
     'leave-management': 'Leave Management',
-    'change-password': 'Change Password',
   };
 
   // Update userColumns definition
   const userColumns = [
     {
       title: 'Employee Name',
-      dataIndex: 'email',
+      dataIndex: 'name',
       key: 'name',
-      render: email => email.split('@')[0].charAt(0).toUpperCase() + email.split('@')[0].slice(1)
+      render: (name, record) => name || record.email.split('@')[0].charAt(0).toUpperCase() + record.email.split('@')[0].slice(1)
     },
     {
       title: 'Email',
       dataIndex: 'email',
       key: 'email',
+    },
+    {
+      title: 'Phone',
+      dataIndex: 'phone',
+      key: 'phone',
+      render: phone => phone || 'Not provided'
     },
     {
       title: 'Role',
@@ -241,6 +245,8 @@ const AdminDashboard = () => {
             setEditEmployeeModal({ visible: true, record });
             editEmployeeForm.setFieldsValue({
               email: record.email,
+              name: record.name,
+              phone: record.phone,
               role: record.role,
               department: record.department,
               manager: record.manager,
@@ -334,6 +340,7 @@ const AdminDashboard = () => {
               email: request.email || request.employeeEmail
             }));
             setLeaveRequests(requests);
+            setFilteredLeaveRequests(applyFilters(requests));
           }
         })
         .catch(err => {
@@ -341,7 +348,7 @@ const AdminDashboard = () => {
           message.error('Failed to load leave requests');
         });
     }
-  }, [selectedSection, users]);
+  }, [selectedSection, users, statusFilter, leaveTypeFilter]);
 
   const leaveRequestColumns = [
     { 
@@ -379,6 +386,27 @@ const AdminDashboard = () => {
       ),
     },
   ];
+
+  // Add filter function
+  const applyFilters = (requests) => {
+    let filtered = requests;
+
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(request => request.status === statusFilter);
+    }
+
+    if (leaveTypeFilter !== 'all') {
+      filtered = filtered.filter(request => request.leaveType === leaveTypeFilter);
+    }
+
+    return filtered;
+  };
+
+  // Clear filters function
+  const clearFilters = () => {
+    setStatusFilter('all');
+    setLeaveTypeFilter('all');
+  };
 
   const handleMenuClick = (e) => {
     setSelectedSection(e.key);
@@ -457,6 +485,24 @@ const AdminDashboard = () => {
         >
           <Input disabled />
         </Form.Item>
+
+        <Form.Item
+          name="name"
+          label="Full Name"
+          rules={[{ required: true, message: 'Please enter employee name' }]}
+        >
+          <Input placeholder="Enter full name" />
+        </Form.Item>
+
+        <Form.Item
+          name="phone"
+          label="Phone Number"
+          rules={[
+            { pattern: /^[\+]?[1-9][\d]{0,15}$/, message: 'Please enter a valid phone number' }
+          ]}
+        >
+          <Input placeholder="Enter phone number" />
+        </Form.Item>
         
         <Form.Item
           name="role"
@@ -494,7 +540,7 @@ const AdminDashboard = () => {
           >
             {managers.map(manager => (
               <Select.Option key={manager.email} value={manager.email}>
-                {manager.email.split('@')[0]} ({manager.department})
+                {manager.name || manager.email.split('@')[0]} ({manager.department})
               </Select.Option>
             ))}
           </Select>
@@ -528,6 +574,47 @@ const AdminDashboard = () => {
       </Form>
     </Modal>
   );
+
+  // Add this helper function before the return statement
+  const refreshAllData = async () => {
+    try {
+      // Refresh dashboard data
+      if (selectedSection === 'dashboard') {
+        const dashboardResponse = await axios.get(`${BACKEND_URL}/api/all-leave-requests`);
+        if (dashboardResponse.data.success && Array.isArray(dashboardResponse.data.leaveRequests)) {
+          const sorted = [...dashboardResponse.data.leaveRequests]
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+            .slice(0, 5)
+            .map(request => ({
+              ...request,
+              key: request._id,
+              email: request.email
+            }));
+          setLatestApplications(sorted);
+        }
+      }
+      
+      // Refresh leave management data
+      if (selectedSection === 'leave-management') {
+        const leaveResponse = await axios.get(`${BACKEND_URL}/api/all-leave-requests`);
+        if (leaveResponse.data.success) {
+          const requests = leaveResponse.data.leaveRequests.map(request => ({
+            ...request,
+            key: request._id,
+            email: request.email || request.employeeEmail
+          }));
+          setLeaveRequests(requests);
+        }
+      }
+      
+      // Refresh users data (for leave balances)
+      await fetchUsers();
+      
+      console.log('All data refreshed successfully');
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+    }
+  };
 
   return (
     <Layout style={{ minHeight: '100vh', position: 'relative' }}>
@@ -797,17 +884,71 @@ const AdminDashboard = () => {
           )}
           {selectedSection === 'leave-management' && (
             <Card bordered={false} style={{ borderRadius: 12, marginBottom: 32 }}>
-              <Title level={4}>Leave Management</Title>
-              <Table columns={leaveRequestColumns} dataSource={leaveRequests} rowKey="_id" />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                <Title level={4}>Leave Management</Title>
+                
+                {/* Filter Controls */}
+                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                  <span style={{ color: '#4c6bc5', fontWeight: 500 }}>Filters:</span>
+                  
+                  <Select
+                    value={statusFilter}
+                    onChange={setStatusFilter}
+                    style={{ width: 120 }}
+                    placeholder="Status"
+                  >
+                    <Select.Option value="all">All Status</Select.Option>
+                    <Select.Option value="pending">Pending</Select.Option>
+                    <Select.Option value="approved">Approved</Select.Option>
+                    <Select.Option value="rejected">Rejected</Select.Option>
+                  </Select>
+
+                  <Select
+                    value={leaveTypeFilter}
+                    onChange={setLeaveTypeFilter}
+                    style={{ width: 120 }}
+                    placeholder="Leave Type"
+                  >
+                    <Select.Option value="all">All Types</Select.Option>
+                    <Select.Option value="casual">Casual</Select.Option>
+                    <Select.Option value="sick">Sick</Select.Option>
+                    <Select.Option value="earned">Earned</Select.Option>
+                  </Select>
+
+                  <Button 
+                    onClick={clearFilters}
+                    size="small"
+                    style={{ color: '#4c6bc5', borderColor: '#4c6bc5' }}
+                  >
+                    Clear
+                  </Button>
+                  
+                  <div style={{ color: '#666', fontSize: '14px' }}>
+                    Showing {filteredLeaveRequests.length} of {leaveRequests.length} requests
+                  </div>
+                </div>
+              </div>
+              
+              <Table 
+                columns={leaveRequestColumns} 
+                dataSource={filteredLeaveRequests} 
+                rowKey="_id"
+                pagination={{
+                  pageSize: 10,
+                  showSizeChanger: true,
+                  showQuickJumper: true,
+                  showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} requests`
+                }}
+              />
             </Card>
           )}
-          {selectedSection === 'change-password' && (
+          {/* Comment out the change password section */}
+          {/* {selectedSection === 'change-password' && (
             <Card bordered={false} style={{ borderRadius: 12, marginBottom: 32, maxWidth: 400 }}>
               <Title level={4}>Change Password</Title>
-              {/* Change Password Form Placeholder */}
               <p>Old Password, New Password, Confirm Password, [Change Button]</p>
             </Card>
-          )}
+          )} */}
           {/* Remove inline sign-out card, use Modal instead */}
           <Modal
             title="Sign Out"
@@ -830,20 +971,24 @@ const AdminDashboard = () => {
           >
             {selectedLeaveRequest && (
               <div>
-                <p><b>Employee Email:</b> {selectedLeaveRequest.employeeEmail}</p>
+                <p><b>Employee Email:</b> {selectedLeaveRequest.email}</p>
                 <p><b>Department:</b> {selectedLeaveRequest.department}</p>
                 <p><b>Leave Type:</b> {selectedLeaveRequest.leaveType}</p>
                 <p><b>From:</b> {selectedLeaveRequest.startDate ? dayjs(selectedLeaveRequest.startDate).format('YYYY-MM-DD HH:mm') : '-'}</p>
                 <p><b>To:</b> {selectedLeaveRequest.endDate ? dayjs(selectedLeaveRequest.endDate).format('YYYY-MM-DD HH:mm') : '-'}</p>
-                <p><b>Status:</b> {selectedLeaveRequest.status}</p>
-                <div style={{ marginTop: 24 }}>
+                <p><b>Status:</b> <span style={{ 
+                  color: selectedLeaveRequest.status === 'approved' ? '#52c41a' : 
+                        selectedLeaveRequest.status === 'rejected' ? '#ff4d4f' : '#faad14',
+                  fontWeight: 'bold',
+                  textTransform: 'capitalize'
+                }}>{selectedLeaveRequest.status}</span></p>
+                <div style={{ marginTop: 24, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   <Button
-                    style={{ marginLeft: 12 }}
                     onClick={() => {
                       setEditModal({ visible: true, record: selectedLeaveRequest });
                       setIsDetailsModalVisible(false);
                       editForm.setFieldsValue({
-                        employeeEmail: selectedLeaveRequest.employeeEmail,
+                        employeeEmail: selectedLeaveRequest.email,
                         department: selectedLeaveRequest.department,
                         leaveType: selectedLeaveRequest.leaveType,
                         startDate: selectedLeaveRequest.startDate ? dayjs(selectedLeaveRequest.startDate) : null,
@@ -854,6 +999,121 @@ const AdminDashboard = () => {
                   >
                     Edit
                   </Button>
+                  
+                  {/* Approve Button */}
+                  {selectedLeaveRequest.status !== 'approved' && (
+                    <Button
+                      type="primary"
+                      style={{ background: '#52c41a', borderColor: '#52c41a' }}
+                      loading={false}
+                      onClick={async () => {
+                        try {
+                          console.log('Approving leave request:', selectedLeaveRequest._id);
+                          const response = await axios.post(`${BACKEND_URL}/api/leave-request-action`, {
+                            id: selectedLeaveRequest._id,
+                            status: 'approved',
+                            comment: 'Approved by Admin'
+                          });
+                          
+                          console.log('Approve response:', response.data);
+                          
+                          if (response.data.success) {
+                            message.success('Leave request approved successfully');
+                            setIsDetailsModalVisible(false);
+                            
+                            // Update the selected leave request status locally
+                            setSelectedLeaveRequest(prev => ({ ...prev, status: 'approved' }));
+                            
+                            // Refresh all data
+                            await refreshAllData();
+                          } else {
+                            message.error(response.data.message || 'Failed to approve leave request');
+                          }
+                        } catch (error) {
+                          console.error('Error approving leave:', error);
+                          message.error(error.response?.data?.message || 'Failed to approve leave request');
+                        }
+                      }}
+                    >
+                      Approve
+                    </Button>
+                  )}
+                  
+                  {/* Set Pending Button */}
+                  {selectedLeaveRequest.status !== 'pending' && (
+                    <Button
+                      style={{ background: '#faad14', borderColor: '#faad14', color: '#fff' }}
+                      loading={false}
+                      onClick={async () => {
+                        try {
+                          console.log('Setting leave request to pending:', selectedLeaveRequest._id);
+                          const response = await axios.post(`${BACKEND_URL}/api/leave-request-action`, {
+                            id: selectedLeaveRequest._id,
+                            status: 'pending',
+                            comment: 'Set to pending by Admin'
+                          });
+                          
+                          console.log('Pending response:', response.data);
+                          
+                          if (response.data.success) {
+                            message.success('Leave request set to pending');
+                            setIsDetailsModalVisible(false);
+                            
+                            // Update the selected leave request status locally
+                            setSelectedLeaveRequest(prev => ({ ...prev, status: 'pending' }));
+                            
+                            // Refresh all data
+                            await refreshAllData();
+                          } else {
+                            message.error(response.data.message || 'Failed to set leave request to pending');
+                          }
+                        } catch (error) {
+                          console.error('Error setting leave to pending:', error);
+                          message.error(error.response?.data?.message || 'Failed to set leave request to pending');
+                        }
+                      }}
+                    >
+                      Set Pending
+                    </Button>
+                  )}
+                  
+                  {/* Reject Button */}
+                  {selectedLeaveRequest.status !== 'rejected' && (
+                    <Button
+                      danger
+                      loading={false}
+                      onClick={async () => {
+                        try {
+                          console.log('Rejecting leave request:', selectedLeaveRequest._id);
+                          const response = await axios.post(`${BACKEND_URL}/api/leave-request-action`, {
+                            id: selectedLeaveRequest._id,
+                            status: 'rejected',
+                            comment: 'Rejected by Admin'
+                          });
+                          
+                          console.log('Reject response:', response.data);
+                          
+                          if (response.data.success) {
+                            message.success('Leave request rejected');
+                            setIsDetailsModalVisible(false);
+                            
+                            // Update the selected leave request status locally
+                            setSelectedLeaveRequest(prev => ({ ...prev, status: 'rejected' }));
+                            
+                            // Refresh all data
+                            await refreshAllData();
+                          } else {
+                            message.error(response.data.message || 'Failed to reject leave request');
+                          }
+                        } catch (error) {
+                          console.error('Error rejecting leave:', error);
+                          message.error(error.response?.data?.message || 'Failed to reject leave request');
+                        }
+                      }}
+                    >
+                      Reject
+                    </Button>
+                  )}
                 </div>
               </div>
             )}
@@ -925,28 +1185,52 @@ const AdminDashboard = () => {
             title="Add New Employee"
             open={employeeModal.visible}
             onOk={() => {
+              console.log('Add Employee - OK button clicked'); // Debug log
               employeeForm.validateFields()
                 .then(values => {
+                  console.log('Form values:', values); // Debug log
+                  
+                  // Show loading state
+                  message.loading('Creating employee...', 0);
+                  
                   axios.post(`${BACKEND_URL}/api/users/create`, values)
                     .then(response => {
+                      console.log('Create employee response:', response.data); // Debug log
+                      
+                      // Hide loading message
+                      message.destroy();
+                      
                       if (response.data.success) {
                         message.success('Employee added successfully');
                         setEmployeeModal({ visible: false, mode: 'add' });
                         employeeForm.resetFields();
                         // Refresh user list
                         fetchUsers();
+                      } else {
+                        message.error(response.data.message || 'Failed to add employee');
                       }
                     })
                     .catch(err => {
-                      message.error('Failed to add employee');
-                      console.error(err);
+                      console.error('Create employee error:', err); // Debug log
+                      
+                      // Hide loading message
+                      message.destroy();
+                      
+                      const errorMessage = err.response?.data?.message || 'Failed to add employee';
+                      message.error(errorMessage);
                     });
+                })
+                .catch(validationError => {
+                  console.error('Form validation error:', validationError); // Debug log
+                  message.error('Please fill in all required fields correctly');
                 });
             }}
             onCancel={() => {
               setEmployeeModal({ visible: false, mode: 'add' });
               employeeForm.resetFields();
             }}
+            okText="Create Employee"
+            cancelText="Cancel"
           >
             <Form
               form={employeeForm}
@@ -967,7 +1251,25 @@ const AdminDashboard = () => {
                   { type: 'email', message: 'Please enter a valid email' }
                 ]}
               >
-                <Input />
+                <Input placeholder="Enter employee email" />
+              </Form.Item>
+
+              <Form.Item
+                name="name"
+                label="Full Name"
+                rules={[{ required: true, message: 'Please enter employee name' }]}
+              >
+                <Input placeholder="Enter full name" />
+              </Form.Item>
+
+              <Form.Item
+                name="phone"
+                label="Phone Number"
+                rules={[
+                  { pattern: /^[\+]?[1-9][\d]{0,15}$/, message: 'Please enter a valid phone number' }
+                ]}
+              >
+                <Input placeholder="Enter phone number" />
               </Form.Item>
               
               <Form.Item
@@ -975,7 +1277,7 @@ const AdminDashboard = () => {
                 label="Role"
                 rules={[{ required: true, message: 'Please select role' }]}
               >
-                <Select>
+                <Select placeholder="Select role">
                   <Select.Option value="employee">Employee</Select.Option>
                   <Select.Option value="manager">Manager</Select.Option>
                 </Select>
@@ -986,28 +1288,29 @@ const AdminDashboard = () => {
                 label="Department"
                 rules={[{ required: true, message: 'Please select department' }]}
               >
-                <Select>
+                <Select placeholder="Select department">
                   <Select.Option value="hr">HR</Select.Option>
                   <Select.Option value="engineering">Engineering</Select.Option>
                   <Select.Option value="sales">Sales</Select.Option>
                 </Select>
               </Form.Item>
 
-              {/* Add this new form item for manager selection */}
               <Form.Item
                 name="manager"
                 label="Manager"
-                rules={[{ required: employeeForm.getFieldValue('role') === 'employee', message: 'Please select a manager' }]}
+                rules={[{ 
+                  required: false, // Make this conditional based on role
+                  message: 'Please select a manager' 
+                }]}
                 dependencies={['role']}
               >
                 <Select
-                  placeholder="Select a manager"
-                  disabled={employeeForm.getFieldValue('role') === 'manager'}
+                  placeholder="Select a manager (optional for managers)"
                   allowClear
                 >
                   {managers.map(manager => (
                     <Select.Option key={manager.email} value={manager.email}>
-                      {manager.email.split('@')[0]} ({manager.department})
+                      {manager.name || manager.email.split('@')[0]} ({manager.department})
                     </Select.Option>
                   ))}
                 </Select>
@@ -1020,7 +1323,7 @@ const AdminDashboard = () => {
                 label="Casual Leave"
                 rules={[{ required: true, message: 'Please enter casual leave balance' }]}
               >
-                <InputNumber min={0} max={30} />
+                <InputNumber min={0} max={30} style={{ width: '100%' }} />
               </Form.Item>
 
               <Form.Item
@@ -1028,7 +1331,7 @@ const AdminDashboard = () => {
                 label="Sick Leave"
                 rules={[{ required: true, message: 'Please enter sick leave balance' }]}
               >
-                <InputNumber min={0} max={30} />
+                <InputNumber min={0} max={30} style={{ width: '100%' }} />
               </Form.Item>
 
               <Form.Item
@@ -1036,7 +1339,7 @@ const AdminDashboard = () => {
                 label="Earned Leave"
                 rules={[{ required: true, message: 'Please enter earned leave balance' }]}
               >
-                <InputNumber min={0} max={30} />
+                <InputNumber min={0} max={30} style={{ width: '100%' }} />
               </Form.Item>
             </Form>
           </Modal>
@@ -1048,3 +1351,4 @@ const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
+
