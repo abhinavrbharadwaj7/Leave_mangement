@@ -486,9 +486,12 @@ router.post('/leave-request', async (req, res) => {
 router.post('/leave-request-action', async (req, res) => {
   try {
     const { id, status, comment } = req.body;
+    console.log('Processing leave request action:', { id, status, comment }); // Debug log
+    
     const leaveRequest = await LeaveRequest.findById(id);
     
     if (!leaveRequest) {
+      console.log('Leave request not found:', id);
       return res.status(404).json({ 
         success: false, 
         message: 'Leave request not found' 
@@ -498,18 +501,24 @@ router.post('/leave-request-action', async (req, res) => {
     const previousStatus = leaveRequest.status;
     const leaveDays = leaveRequest.leaveDays || calculateLeaveDays(leaveRequest.startDate, leaveRequest.endDate);
 
+    console.log('Previous status:', previousStatus, 'New status:', status);
+
     // Update leave request
     leaveRequest.status = status;
     leaveRequest.managerComment = comment || '';
-    leaveRequest.leaveDays = leaveDays; // Ensure leaveDays is stored
+    leaveRequest.leaveDays = leaveDays;
     await leaveRequest.save();
+
+    console.log('Leave request updated successfully');
 
     // Handle leave balance updates based on status change
     if (status === 'approved' && previousStatus !== 'approved') {
       // Approve: Deduct from leave balance
       try {
         await updateLeaveBalance(leaveRequest.email, leaveRequest.leaveType, leaveDays);
+        console.log('Leave balance updated for approval');
       } catch (balanceError) {
+        console.error('Balance error:', balanceError.message);
         return res.status(400).json({
           success: false,
           message: balanceError.message
@@ -518,18 +527,25 @@ router.post('/leave-request-action', async (req, res) => {
     } else if (status === 'rejected' && previousStatus === 'approved') {
       // Reject previously approved leave: Restore leave balance
       await restoreLeaveBalance(leaveRequest.email, leaveRequest.leaveType, leaveDays);
+      console.log('Leave balance restored for rejection');
+    } else if (status === 'pending' && previousStatus === 'approved') {
+      // Set to pending from approved: Restore leave balance
+      await restoreLeaveBalance(leaveRequest.email, leaveRequest.leaveType, leaveDays);
+      console.log('Leave balance restored for pending');
     }
 
     res.json({ 
       success: true, 
-      message: `Leave request ${status}`,
-      leaveDays: leaveDays
+      message: `Leave request ${status} successfully`,
+      leaveDays: leaveDays,
+      updatedRequest: leaveRequest
     });
   } catch (error) {
-    console.error('Error updating leave request:', error);
+    console.error('❌ Error updating leave request:', error);
     res.status(500).json({ 
       success: false, 
-      message: 'Action failed' 
+      message: 'Action failed',
+      error: error.message 
     });
   }
 });
@@ -888,6 +904,72 @@ router.get('/manager-leave-requests/:managerEmail', async (req, res) => {
   } catch (error) {
     console.error('❌ Error fetching manager leave requests:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch leave requests' });
+  }
+});
+
+// Add the missing route to create a new user/employee
+router.post('/users/create', async (req, res) => {
+  try {
+    const { email, role, department, manager, leaveBalance } = req.body;
+    
+    console.log('Creating new employee:', { email, role, department, manager, leaveBalance }); // Debug log
+    
+    // Validate required fields
+    if (!email || !role || !department) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email, role, and department are required'
+      });
+    }
+    
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'User with this email already exists'
+      });
+    }
+    
+    // Prepare user data
+    const userData = {
+      email,
+      role,
+      department,
+      manager: manager || null,
+      leaveBalance: {
+        casual: leaveBalance?.casual || 12,
+        sick: leaveBalance?.sick || 12,
+        earned: leaveBalance?.earned || 15
+      }
+    };
+    
+    // Create new user
+    const newUser = new User(userData);
+    await newUser.save();
+    
+    console.log('✅ Employee created successfully:', newUser.email);
+    
+    res.status(201).json({
+      success: true,
+      message: 'Employee created successfully',
+      user: {
+        _id: newUser._id,
+        email: newUser.email,
+        role: newUser.role,
+        department: newUser.department,
+        manager: newUser.manager,
+        leaveBalance: newUser.leaveBalance
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error creating employee:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create employee',
+      error: error.message
+    });
   }
 });
 
