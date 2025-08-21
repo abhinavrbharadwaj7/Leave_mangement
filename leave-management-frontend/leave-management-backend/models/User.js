@@ -6,6 +6,14 @@ const userSchema = new mongoose.Schema({
     required: true, 
     unique: true 
   },
+  name: {
+    type: String,
+    required: false // Will be required when adding employees
+  },
+  phone: {
+    type: String,
+    required: false
+  },
   role: { 
     type: String, 
     required: false,
