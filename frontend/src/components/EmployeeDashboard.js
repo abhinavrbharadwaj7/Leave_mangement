@@ -71,6 +71,20 @@ const EmployeeDashboard = () => {
     checkAuth();
   }, [navigate]);
 
+  // SAFETY: if initialization hangs for any reason, clear the initializing spinner after 7s
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setInitializing(prev => {
+        if (prev) {
+          console.warn('Initialization timeout in EmployeeDashboard.js: forcing initializing=false');
+          return false;
+        }
+        return prev;
+      });
+    }, 7000);
+    return () => clearTimeout(t);
+  }, []);
+
   const showModal = () => setModalVisible(true);
   const handleCancel = () => setModalVisible(false);
 

@@ -4,6 +4,19 @@ const User = require('../models/User');
 const transporter = require('../config/emailConfig');
 const LeaveRequest = require('../models/LeaveRequest'); // Make sure this is at the top
 
+// Quick existence check used by the frontend during auth initialization
+router.get('/check-user/:email', async (req, res) => {
+  try {
+    const { email } = req.params;
+    if (!email) return res.status(400).json({ success: false, exists: false, message: 'Email is required' });
+    const user = await User.findOne({ email }).select('email');
+    return res.json({ success: true, exists: !!user });
+  } catch (error) {
+    console.error('Error in check-user route:', error);
+    return res.status(500).json({ success: false, exists: false, message: 'Server error' });
+  }
+});
+
 // Generate and send OTP
 router.post('/send-otp', async (req, res) => {
   try {
@@ -20,12 +33,12 @@ router.post('/send-otp', async (req, res) => {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     console.log('Generated OTP:', otp); // For testing purposes
 
-    // Send email with OTP
-const mailOptions = {
-  from: process.env.EMAIL_USER,
-  to: email,
-  subject: 'Leave Management Portal - Login Verification',
-  html: `
+    // Prepare mail options
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: 'Leave Management Portal - Login Verification',
+      html: `
     <!DOCTYPE html>
     <html lang="en">
     <head>
@@ -164,54 +177,63 @@ const mailOptions = {
 };
 
 
-    // Send email with professional template
-    await transporter.sendMail(mailOptions);
-    console.log('✅ Professional OTP email sent successfully to:', email);
+    // Try to verify transporter and send email, but don't fail if email sending fails
+    let emailSent = false;
+    try {
+      // transporter.verify may fail if SMTP/auth not configured
+      await transporter.verify();
+      await transporter.sendMail(mailOptions);
+      emailSent = true;
+      console.log('✅ Professional OTP email sent successfully to:', email);
+    } catch (mailError) {
+      console.error('⚠️ Email send failed, continuing to save OTP:', mailError);
+      // proceed: we'll still save OTP to DB so user can verify even if email wasn't delivered
+    }
 
-    // Save or update user with OTP
+    // Save or update user with OTP regardless of email success
     let user = await User.findOne({ email });
+    const otpPayload = {
+      code: otp,
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000) // 10 minutes expiry
+    };
+
     if (!user) {
       user = new User({
         email,
-        otp: {
-          code: otp,
-          expiresAt: new Date(Date.now() + 10 * 60 * 1000) // 10 minutes expiry
-        }
+        otp: otpPayload
       });
     } else {
-      user.otp = {
-        code: otp,
-        expiresAt: new Date(Date.now() + 10 * 60 * 1000)
-      };
+      user.otp = otpPayload;
     }
 
     await user.save();
-    console.log('✅ User OTP saved successfully');
+    console.log('✅ User OTP saved successfully for', email);
 
-    res.json({ 
-      success: true, 
-      message: 'OTP sent successfully! Please check your email for the verification code.',
-      // otp: otp // Uncomment only for testing - remove in production
-    });
+    // Respond: if email failed, still return success but with warning (include OTP only in development)
+    if (emailSent) {
+      return res.json({ success: true, message: 'OTP sent successfully! Please check your email for the verification code.' });
+    } else {
+      const responsePayload = {
+        success: true,
+        message: 'OTP generated and saved. Email sending failed; check server logs for details.'
+      };
+      if (process.env.NODE_ENV === 'development') {
+        // include OTP in response only for development debugging
+        responsePayload.otp = otp;
+      }
+      return res.json(responsePayload);
+    }
   } catch (error) {
     console.error('❌ Error in send-otp:', error);
-    
-    // Provide specific error messages
     let errorMessage = 'Failed to send OTP. Please try again.';
-    
     if (error.code === 'EAUTH') {
       errorMessage = 'Email authentication failed. Please contact support.';
     } else if (error.code === 'ENOTFOUND') {
       errorMessage = 'Network error. Please check your connection and try again.';
-    } else if (error.message.includes('Invalid email')) {
+    } else if (error.message && error.message.includes('Invalid email')) {
       errorMessage = 'Please enter a valid email address.';
     }
-    
-    res.status(500).json({ 
-      success: false, 
-      message: errorMessage,
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
+    res.status(500).json({ success: false, message: errorMessage, error: process.env.NODE_ENV === 'development' ? error.message : undefined });
   }
 });
 
@@ -961,96 +983,35 @@ router.get('/manager-leave-requests/:managerEmail', async (req, res) => {
       return res.status(403).json({ success: false, message: 'Unauthorized' });
     }
 
-    // Get all team members in the same department
+    // Get all team members in the same department (including manager if desired)
     const teamMembers = await User.find({ 
       department: manager.department,
       role: { $in: ['employee', 'manager'] }
     }).select('email');
 
-    const teamEmails = teamMembers.map(member => member.email);
-    
-    // Get leave requests for all team members
-    const leaveRequests = await LeaveRequest.find({ 
+    // Build list of emails to query leave requests for
+    const teamEmails = teamMembers.map(m => m.email);
+    // Ensure manager's own email is included
+    if (!teamEmails.includes(managerEmail)) teamEmails.push(managerEmail);
+
+    // Fetch leave requests for team emails
+    const leaveRequests = await LeaveRequest.find({
       email: { $in: teamEmails }
-    }).sort({ startDate: 1 });
+    }).sort({ createdAt: -1 });
 
-    console.log(`✅ Found ${leaveRequests.length} leave requests for manager ${managerEmail}`);
-
-    res.json({ success: true, leaveRequests });
+    return res.json({
+      success: true,
+      leaveRequests
+    });
   } catch (error) {
     console.error('❌ Error fetching manager leave requests:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch leave requests' });
-  }
-});
-
-// Add the missing route to create a new user/employee
-router.post('/users/create', async (req, res) => {
-  try {
-    const { email, name, phone, role, department, manager, leaveBalance } = req.body;
-    
-    console.log('Creating new employee:', { email, name, phone, role, department, manager, leaveBalance }); // Debug log
-    
-    // Validate required fields
-    if (!email || !name || !role || !department) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email, name, role, and department are required'
-      });
-    }
-    
-    // Check if user already exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({
-        success: false,
-        message: 'User with this email already exists'
-      });
-    }
-    
-    // Prepare user data
-    const userData = {
-      email,
-      name,
-      phone: phone || '',
-      role,
-      department,
-      manager: manager || null,
-      leaveBalance: {
-        casual: leaveBalance?.casual || 12,
-        sick: leaveBalance?.sick || 12,
-        earned: leaveBalance?.earned || 15
-      }
-    };
-    
-    // Create new user
-    const newUser = new User(userData);
-    await newUser.save();
-    
-    console.log('✅ Employee created successfully:', newUser.email);
-    
-    res.status(201).json({
-      success: true,
-      message: 'Employee created successfully',
-      user: {
-        _id: newUser._id,
-        email: newUser.email,
-        name: newUser.name,
-        phone: newUser.phone,
-        role: newUser.role,
-        department: newUser.department,
-        manager: newUser.manager,
-        leaveBalance: newUser.leaveBalance
-      }
-    });
-    
-  } catch (error) {
-    console.error('❌ Error creating employee:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
-      message: 'Failed to create employee',
+      message: 'Failed to fetch manager leave requests',
       error: error.message
     });
   }
 });
 
+// Ensure router is exported
 module.exports = router;

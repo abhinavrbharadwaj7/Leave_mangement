@@ -958,7 +958,18 @@ const AdminDashboard = () => {
             centered
           >
             <p>Do you want to sign out?</p>
-            <Button type="primary" onClick={() => { setIsSignOutModalVisible(false); setTimeout(() => navigate('/'), 500); }}>Yes</Button>
+            <Button type="primary" onClick={() => { 
+              // Clear all authentication data
+              localStorage.removeItem('userData');
+              localStorage.removeItem('token');
+              localStorage.removeItem('userEmail');
+              localStorage.removeItem('userRole');
+              
+              setIsSignOutModalVisible(false); 
+              message.success('Signed out successfully');
+              
+              setTimeout(() => navigate('/'), 300); 
+            }}>Yes</Button>
             <Button style={{ marginLeft: 12 }} onClick={() => setIsSignOutModalVisible(false)}>No</Button>
           </Modal>
           {/* NEW: Leave Details Modal */}
