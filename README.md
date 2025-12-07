@@ -1,4 +1,4 @@
-# Leave Management System
+# Leave Management System for Acquis Compliance
 
 A full-featured Leave Management platform for organizations, built with React, Node.js, Express, and MongoDB.
 
