@@ -1,0 +1,56 @@
+/* DeliveryAnimation.css - 3D Version */
+.delivery-overlay-3d {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(255, 255, 255, 0.95);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+
+.success-message-3d {
+  position: absolute;
+  bottom: 10%;
+  width: 100%;
+  text-align: center;
+  animation: bounceIn 1s ease;
+}
+
+.success-message-3d h2 {
+  color: #34495e;
+  font-size: 2.5rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin: 0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+@keyframes bounceIn {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+
+  50% {
+    transform: scale(1.1);
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Canvas needs to take full space */
+.delivery-overlay-3d canvas {
+  width: 100% !important;
+  height: 100% !important;
+  outline: none;
+}

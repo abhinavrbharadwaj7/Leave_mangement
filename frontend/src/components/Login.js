@@ -278,9 +278,9 @@ const Login = () => {
       <Spin spinning={loading}>
         <div className="login-box">
           <div className="logo">
-            <img 
-              src={logo} 
-              alt="Acquis Logo" 
+            <img
+              src={logo}
+              alt="Acquis Logo"
               onError={(e) => {
                 e.target.onerror = null;
                 e.target.style.display = 'none';
@@ -288,7 +288,7 @@ const Login = () => {
             />
           </div>
           <h2>Sign in to your workspace</h2>
-          <Form form={form} onFinish={handleVerifyOTP} className="login-form">
+          <Form form={form} onFinish={isOtpSent ? handleVerifyOTP : handleGetOTP} className="login-form">
             <Form.Item
               name="email"
               rules={[
@@ -298,14 +298,14 @@ const Login = () => {
                 ...(DEV_BYPASS_OTP
                   ? []
                   : [{
-                      validator: (_, value) => {
-                        if (!value) return Promise.resolve();
-                        const allowedPattern = new RegExp(`^[A-Za-z0-9._%+-]+@${ALLOWED_EMAIL_DOMAIN.replace('.', '\\.')}$`);
-                        return allowedPattern.test(value)
-                          ? Promise.resolve()
-                          : Promise.reject(new Error(`Please enter an @${ALLOWED_EMAIL_DOMAIN} email address`));
-                      }
-                    }]
+                    validator: (_, value) => {
+                      if (!value) return Promise.resolve();
+                      const allowedPattern = new RegExp(`^[A-Za-z0-9._%+-]+@${ALLOWED_EMAIL_DOMAIN.replace('.', '\\.')}$`);
+                      return allowedPattern.test(value)
+                        ? Promise.resolve()
+                        : Promise.reject(new Error(`Please enter an @${ALLOWED_EMAIL_DOMAIN} email address`));
+                    }
+                  }]
                 )
               ]}
             >
@@ -316,8 +316,9 @@ const Login = () => {
                 disabled={isOtpSent}
               />
             </Form.Item>
-            <Button 
-              type="primary" 
+            <Button
+              type="primary"
+              htmlType="button"
               onClick={handleGetOTP}
               disabled={isOtpSent && loading}
               className="submit-btn"
@@ -344,8 +345,8 @@ const Login = () => {
               </Form.Item>
             )}
             {isOtpSent && (
-              <Button 
-                type="primary" 
+              <Button
+                type="primary"
                 htmlType="submit"
                 className="submit-btn"
                 size="large"
